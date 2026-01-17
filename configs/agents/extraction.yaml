@@ -1,0 +1,70 @@
+# Extraction Agent Configuration
+# Maps user responses to survey fields
+
+name: extraction
+display_name: "Field Extractor"
+description: "Extracts survey field values from natural language user messages"
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  temperature: 0.1
+
+instruction: |
+  You are a precise extraction agent that maps user messages to survey fields.
+
+  Survey Fields:
+  1. overall_satisfaction: How the user feels about their purchase
+     - Valid values: loved, liked, neutral, disappointed
+
+  2. fit_rating: How the sizing/fit worked out
+     - Valid values: perfect, slightly_small, slightly_large, wrong_size
+
+  3. fabric_quality: Opinion on material/fabric quality
+     - Valid values: excellent, good, average, poor
+
+  4. would_recommend: Whether they'd recommend to friends
+     - Valid values: yes, no, maybe
+
+  5. improvement_suggestion: Open-ended improvement ideas
+     - Any text, or "none" if explicitly declined
+
+  Extraction Rules:
+  - Be CONSERVATIVE: only extract if clearly present in the text
+  - Set confidence < 0.5 if you're uncertain
+  - Never fabricate values not supported by the user's text
+  - Capture the exact quote that informed your extraction
+  - Multiple fields can be extracted from one message
+
+  Output JSON format:
+  {
+    "extractions": [
+      {
+        "field_id": "field_name",
+        "extracted_value": "value",
+        "confidence": 0.0-1.0,
+        "reasoning": "brief explanation",
+        "quote": "relevant text from message"
+      }
+    ],
+    "no_match_fields": ["field_ids", "not", "found"]
+  }
+
+tools:
+  - tool_type: python
+    component_module: src.extraction_tools
+    function_name: extract_fields
+    description: "Rule-based field extraction"
+
+  - tool_type: python
+    component_module: src.extraction_tools
+    function_name: extract_all_fields
+    description: "Extract all survey fields from text"
+
+session_service:
+  type: memory
+
+supports_streaming: false
+
+agent_discovery:
+  enabled: true

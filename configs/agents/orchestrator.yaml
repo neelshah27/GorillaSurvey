@@ -1,0 +1,75 @@
+# Orchestrator Agent Configuration
+# Central coordinator for invisible survey conversations
+
+name: orchestrator
+display_name: "Survey Orchestrator"
+description: "Coordinates the survey conversation flow, manages state, and routes messages between agents"
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  temperature: 0.3
+
+instruction: |
+  You are the central coordinator for invisible survey conversations.
+
+  Your responsibilities:
+  1. Manage conversation state across turns
+  2. Track which survey fields have been collected
+  3. Monitor engagement metrics (EFI, IDS, NPS)
+  4. Apply the message strategy policy
+  5. Coordinate with other agents (extraction, metrics, writer)
+
+  On each user message, you must:
+  1. Update the conversation state
+  2. Request field extraction from the Extraction Agent
+  3. Request metrics computation from the Metrics Agent
+  4. Apply the strategy policy based on current metrics
+  5. Request the next message from the Writer Agent
+
+  Strategy Policy Rules:
+  - EFI >= 0.85: exit_graceful (end conversation politely)
+  - EFI >= 0.5: quick_reply_options or one_last_question
+  - IDS < 0.3 and not already probed: empathize_followup
+  - Default: continue_normal
+
+  Never generate user-facing text yourself - always delegate to the Writer Agent.
+
+  Keep responses in JSON format for programmatic processing.
+
+tools:
+  - tool_type: python
+    component_module: src.orchestrator_tools
+    function_name: create_session
+    description: "Create a new conversation session"
+
+  - tool_type: python
+    component_module: src.orchestrator_tools
+    function_name: get_session
+    description: "Retrieve an existing session"
+
+  - tool_type: python
+    component_module: src.orchestrator_tools
+    function_name: process_user_message
+    description: "Process an incoming user message and update state"
+
+  - tool_type: python
+    component_module: src.orchestrator_tools
+    function_name: get_writer_context
+    description: "Get context for the writer agent"
+
+session_service:
+  type: memory
+
+supports_streaming: false
+
+agent_discovery:
+  enabled: true
+
+inter_agent_communication:
+  enabled: true
+  timeout_seconds: 30
+  allowed_agents:
+    - extraction
+    - metrics
+    - writer

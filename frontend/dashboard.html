@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invisible Feedback - Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+        }
+
+        .dashboard-nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--spacing-md) var(--spacing-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-nav h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: var(--spacing-md);
+        }
+
+        .refresh-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .refresh-btn:hover {
+            background: var(--accent-secondary);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-lg);
+            padding: var(--spacing-lg);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card.wide {
+            grid-column: span 2;
+        }
+
+        .stat-card.full {
+            grid-column: span 4;
+        }
+
+        .stat-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-value.small {
+            font-size: 1.5rem;
+        }
+
+        .stat-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+
+        .nps-display {
+            display: flex;
+            align-items: baseline;
+            gap: var(--spacing-sm);
+        }
+
+        .nps-breakdown {
+            display: flex;
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-md);
+        }
+
+        .nps-item {
+            text-align: center;
+        }
+
+        .nps-item-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .nps-item-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .themes-list {
+            margin-top: var(--spacing-md);
+        }
+
+        .theme-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .theme-name {
+            width: 100px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        .theme-bar-container {
+            flex: 1;
+            height: 24px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+
+        .theme-bar-fill {
+            height: 100%;
+            background: var(--accent-primary);
+            border-radius: var(--radius-sm);
+            transition: width 0.3s ease;
+        }
+
+        .theme-count {
+            width: 40px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .sessions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--spacing-md);
+        }
+
+        .sessions-table th,
+        .sessions-table td {
+            padding: var(--spacing-md);
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sessions-table th {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+        }
+
+        .sessions-table tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.completed {
+            background: rgba(74, 222, 128, 0.2);
+            color: #15803d;
+        }
+
+        .status-badge.in_progress {
+            background: rgba(96, 165, 250, 0.2);
+            color: #1d4ed8;
+        }
+
+        .status-badge.exited {
+            background: rgba(251, 191, 36, 0.2);
+            color: #a16207;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .extractions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+
+        .extraction-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+        }
+
+        .extraction-field-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        .extraction-value {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: var(--spacing-xs) 0;
+        }
+
+        .extraction-quote {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+
+        .metrics-gauge {
+            display: flex;
+            gap: var(--spacing-lg);
+            margin-top: var(--spacing-md);
+        }
+
+        .gauge {
+            flex: 1;
+            text-align: center;
+        }
+
+        .gauge-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .gauge-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .gauge-bar {
+            height: 8px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-full);
+            margin-top: var(--spacing-sm);
+            overflow: hidden;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            border-radius: var(--radius-full);
+            transition: width 0.3s ease;
+        }
+
+        .gauge-fill.efi {
+            background: linear-gradient(90deg, var(--efi-low), var(--efi-high));
+        }
+
+        .gauge-fill.ids {
+            background: linear-gradient(90deg, var(--ids-low), var(--ids-high));
+        }
+    </style>
+</head>
+<body>
+    <nav class="dashboard-nav">
+        <h1>Invisible Feedback Dashboard</h1>
+        <div class="nav-actions">
+            <span class="live-indicator">
+                <span class="live-dot"></span>
+                <span id="live-count">0</span> live sessions
+            </span>
+            <button class="refresh-btn" onclick="loadDashboard()">Refresh</button>
+            <a href="/" class="refresh-btn" style="text-decoration: none;">Back to Chat</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-grid">
+        <!-- Key Metrics -->
+        <div class="stat-card">
+            <div class="stat-header">Total Sessions</div>
+            <div class="stat-value" id="total-sessions">0</div>
+            <div class="stat-subtitle" id="session-breakdown">0 completed, 0 exited</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">Completion Rate</div>
+            <div class="stat-value" id="completion-rate">0%</div>
+            <div class="stat-subtitle">of finished sessions</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">Avg. Turns</div>
+            <div class="stat-value small" id="avg-turns">0</div>
+            <div class="stat-subtitle" id="avg-duration">0s avg duration</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">Net Promoter Score</div>
+            <div class="nps-display">
+                <div class="stat-value" id="nps-score">0</div>
+            </div>
+            <div class="nps-breakdown">
+                <div class="nps-item">
+                    <div class="nps-item-value" id="promoter-count" style="color: var(--nps-promoter)">0</div>
+                    <div class="nps-item-label">Promoters</div>
+                </div>
+                <div class="nps-item">
+                    <div class="nps-item-value" id="passive-count" style="color: var(--nps-passive)">0</div>
+                    <div class="nps-item-label">Passives</div>
+                </div>
+                <div class="nps-item">
+                    <div class="nps-item-value" id="detractor-count" style="color: var(--nps-detractor)">0</div>
+                    <div class="nps-item-label">Detractors</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engagement Metrics -->
+        <div class="stat-card wide">
+            <div class="stat-header">Average Engagement Metrics</div>
+            <div class="metrics-gauge">
+                <div class="gauge">
+                    <div class="gauge-value" id="avg-efi">0.00</div>
+                    <div class="gauge-label">Avg. Friction (EFI)</div>
+                    <div class="gauge-bar">
+                        <div class="gauge-fill efi" id="efi-gauge" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="gauge">
+                    <div class="gauge-value" id="avg-ids">0.00</div>
+                    <div class="gauge-label">Avg. Insight Depth (IDS)</div>
+                    <div class="gauge-bar">
+                        <div class="gauge-fill ids" id="ids-gauge" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Themes -->
+        <div class="stat-card wide">
+            <div class="stat-header">Top Feedback Themes</div>
+            <div class="themes-list" id="themes-list">
+                <div class="empty-state">No themes extracted yet</div>
+            </div>
+        </div>
+
+        <!-- Live Sessions -->
+        <div class="stat-card full">
+            <div class="stat-header">Live Sessions</div>
+            <div id="live-sessions">
+                <div class="empty-state">No active sessions</div>
+            </div>
+        </div>
+
+        <!-- All Sessions -->
+        <div class="stat-card full">
+            <div class="stat-header">All Sessions</div>
+            <table class="sessions-table">
+                <thead>
+                    <tr>
+                        <th>Session ID</th>
+                        <th>Persona</th>
+                        <th>Status</th>
+                        <th>Turns</th>
+                        <th>Completion</th>
+                        <th>Final EFI</th>
+                        <th>NPS Bucket</th>
+                    </tr>
+                </thead>
+                <tbody id="sessions-tbody">
+                    <tr>
+                        <td colspan="7" class="empty-state">No sessions yet</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Recent Extractions -->
+        <div class="stat-card full">
+            <div class="stat-header">Recent Extractions</div>
+            <div class="extractions-grid" id="extractions-grid">
+                <div class="empty-state">No extractions yet</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/dashboard`);
+                const data = await response.json();
+                updateDashboard(data);
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+            }
+        }
+
+        function updateDashboard(data) {
+            const metrics = data.aggregate_metrics;
+
+            // Key metrics
+            document.getElementById('total-sessions').textContent = metrics.total_sessions;
+            document.getElementById('session-breakdown').textContent =
+                `${metrics.completed_sessions} completed, ${metrics.exited_sessions} exited`;
+
+            document.getElementById('completion-rate').textContent =
+                `${Math.round(metrics.completion_rate * 100)}%`;
+
+            document.getElementById('avg-turns').textContent = metrics.avg_turns.toFixed(1);
+            document.getElementById('avg-duration').textContent =
+                `${Math.round(metrics.avg_duration_seconds)}s avg duration`;
+
+            // NPS
+            document.getElementById('nps-score').textContent = Math.round(metrics.nps_score);
+            document.getElementById('promoter-count').textContent = metrics.promoter_count;
+            document.getElementById('passive-count').textContent = metrics.passive_count;
+            document.getElementById('detractor-count').textContent = metrics.detractor_count;
+
+            // Engagement metrics
+            document.getElementById('avg-efi').textContent = metrics.avg_efi.toFixed(2);
+            document.getElementById('avg-ids').textContent = metrics.avg_ids.toFixed(2);
+            document.getElementById('efi-gauge').style.width = `${metrics.avg_efi * 100}%`;
+            document.getElementById('ids-gauge').style.width = `${metrics.avg_ids * 100}%`;
+
+            // Themes
+            const themesList = document.getElementById('themes-list');
+            if (metrics.top_themes && metrics.top_themes.length > 0) {
+                const maxCount = Math.max(...metrics.top_themes.map(t => t.count));
+                themesList.innerHTML = metrics.top_themes.map(theme => `
+                    <div class="theme-row">
+                        <span class="theme-name">${theme.theme}</span>
+                        <div class="theme-bar-container">
+                            <div class="theme-bar-fill" style="width: ${(theme.count / maxCount) * 100}%"></div>
+                        </div>
+                        <span class="theme-count">${theme.count}</span>
+                    </div>
+                `).join('');
+            } else {
+                themesList.innerHTML = '<div class="empty-state">No themes extracted yet</div>';
+            }
+
+            // Live sessions
+            const liveSessions = data.live_sessions;
+            document.getElementById('live-count').textContent = liveSessions.length;
+            const liveContainer = document.getElementById('live-sessions');
+
+            if (liveSessions.length > 0) {
+                liveContainer.innerHTML = `
+                    <table class="sessions-table">
+                        <thead>
+                            <tr>
+                                <th>Session ID</th>
+                                <th>Persona</th>
+                                <th>Turns</th>
+                                <th>Current EFI</th>
+                                <th>Current IDS</th>
+                                <th>Fields Completed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${liveSessions.map(session => `
+                                <tr>
+                                    <td><code>${session.session_id}</code></td>
+                                    <td>${session.persona_id || 'Manual'}</td>
+                                    <td>${session.turn_count}</td>
+                                    <td>${session.current_efi.toFixed(2)}</td>
+                                    <td>${session.current_ids.toFixed(2)}</td>
+                                    <td>${session.fields_completed}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else {
+                liveContainer.innerHTML = '<div class="empty-state">No active sessions</div>';
+            }
+
+            // All sessions
+            const sessionsTbody = document.getElementById('sessions-tbody');
+            if (data.session_summaries && data.session_summaries.length > 0) {
+                sessionsTbody.innerHTML = data.session_summaries.map(session => `
+                    <tr>
+                        <td><code>${session.session_id}</code></td>
+                        <td>${session.persona_id || 'Manual'}</td>
+                        <td><span class="status-badge ${session.status}">${session.status}</span></td>
+                        <td>${session.turn_count}</td>
+                        <td>${Math.round(session.completion_rate * 100)}%</td>
+                        <td>${session.final_efi.toFixed(2)}</td>
+                        <td>${session.nps_bucket}</td>
+                    </tr>
+                `).join('');
+            } else {
+                sessionsTbody.innerHTML = '<tr><td colspan="7" class="empty-state">No sessions yet</td></tr>';
+            }
+
+            // Recent extractions
+            const extractionsGrid = document.getElementById('extractions-grid');
+            if (data.recent_extractions && data.recent_extractions.length > 0) {
+                extractionsGrid.innerHTML = data.recent_extractions.slice(0, 12).map(ext => `
+                    <div class="extraction-card">
+                        <div class="extraction-field-name">${formatFieldName(ext.field_id)}</div>
+                        <div class="extraction-value">${ext.value}</div>
+                        <div class="extraction-quote">"${ext.quote}"</div>
+                    </div>
+                `).join('');
+            } else {
+                extractionsGrid.innerHTML = '<div class="empty-state">No extractions yet</div>';
+            }
+        }
+
+        function formatFieldName(fieldId) {
+            return fieldId
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // Initial load
+        loadDashboard();
+
+        // Auto-refresh every 5 seconds
+        setInterval(loadDashboard, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+# Analytics Agent Configuration
+# Aggregates sessions and extracts themes
+
+name: analytics
+display_name: "Analytics Aggregator"
+description: "Aggregates session data and extracts themes for dashboard display"
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  temperature: 0.2
+
+instruction: |
+  You aggregate survey session data and extract insights for the dashboard.
+
+  Your responsibilities:
+
+  1. AGGREGATE METRICS
+     - Total sessions, completion rate
+     - Average EFI (engagement friction)
+     - Average IDS (insight depth)
+     - NPS score calculation: (promoters - detractors) / total * 100
+
+  2. THEME EXTRACTION
+     Use keyword matching to identify common themes in improvement suggestions:
+     - sizing: fit, size, small, large, tight, loose
+     - colors: color options, shades, variety
+     - price: cost, expensive, value, worth
+     - quality: stitching, durability, construction
+     - shipping: delivery, package, tracking
+     - fabric: material, soft, comfortable
+     - photos: pictures, accurate representation
+
+     Count occurrences and return top 5 themes.
+
+  3. FIELD COMPLETION RATES
+     For each survey field, calculate what percentage of sessions captured it.
+
+  4. SESSION SUMMARIES
+     Provide brief summaries of recent sessions for the live view.
+
+  OUTPUT FORMAT (JSON):
+  {
+    "aggregate_metrics": {
+      "total_sessions": N,
+      "completion_rate": 0.0-1.0,
+      "avg_efi": 0.0-1.0,
+      "avg_ids": 0.0-1.0,
+      "nps_score": -100 to 100
+    },
+    "top_themes": [{"theme": "name", "count": N}, ...],
+    "field_completion_rates": {"field_id": 0.0-1.0, ...},
+    "live_sessions": [{session summaries}, ...]
+  }
+
+  Keep computations simple—use rule-based extraction, no clustering or embeddings.
+
+tools:
+  - tool_type: python
+    component_module: src.analytics_tools
+    function_name: compute_aggregate_metrics
+    description: "Compute aggregate metrics across sessions"
+
+  - tool_type: python
+    component_module: src.analytics_tools
+    function_name: extract_themes_from_sessions
+    description: "Extract themes from session data"
+
+  - tool_type: python
+    component_module: src.analytics_tools
+    function_name: get_dashboard_data
+    description: "Get all dashboard data at once"
+
+session_service:
+  type: memory
+
+supports_streaming: false
+
+agent_discovery:
+  enabled: true

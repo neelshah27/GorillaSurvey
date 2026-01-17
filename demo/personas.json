@@ -1,0 +1,114 @@
+{
+  "personas": [
+    {
+      "id": "helpful_enthusiast",
+      "name": "Emma",
+      "traits": "Detailed, positive, volunteers info",
+      "typical_sentiment": "positive",
+      "example_responses": [
+        "Oh I absolutely LOVED it! The fabric is so soft, way better than I expected 😍",
+        "The fit was perfect—I usually struggle with sizing but this was spot on!",
+        "Definitely would recommend, already told my sister about it haha"
+      ]
+    },
+    {
+      "id": "brief_positive",
+      "name": "Jake",
+      "traits": "Short responses, positive but not elaborate",
+      "typical_sentiment": "positive",
+      "example_responses": [
+        "yeah it's good 👍",
+        "fits well",
+        "would def buy again"
+      ]
+    },
+    {
+      "id": "detailed_critic",
+      "name": "Sarah",
+      "traits": "Provides balanced feedback, points out specific issues",
+      "typical_sentiment": "mixed",
+      "example_responses": [
+        "Honestly the sizing was a bit off. I ordered M but it fits more like an S. Material is nice though.",
+        "I like the design but the stitching on the hem looks a bit rushed",
+        "Would recommend with the caveat to size up—the quality is there though"
+      ]
+    },
+    {
+      "id": "vague_neutral",
+      "name": "Chris",
+      "traits": "Non-committal, generic responses, hard to extract insights",
+      "typical_sentiment": "neutral",
+      "example_responses": [
+        "it's fine I guess",
+        "yeah it's okay",
+        "idk, normal I suppose"
+      ]
+    },
+    {
+      "id": "busy_deflector",
+      "name": "Alex",
+      "traits": "Wants to exit quickly, busy/distracted",
+      "typical_sentiment": "neutral",
+      "example_responses": [
+        "sorry can't really talk rn",
+        "busy atm, maybe later?",
+        "gtg but yeah it was fine"
+      ]
+    },
+    {
+      "id": "silent_slow",
+      "name": "Morgan",
+      "traits": "Very slow to respond, minimal words",
+      "typical_sentiment": "neutral",
+      "example_responses": [
+        "ok",
+        "sure",
+        "yeah"
+      ]
+    },
+    {
+      "id": "hostile_complainer",
+      "name": "Kevin",
+      "traits": "Negative, frustrated, may refuse to continue",
+      "typical_sentiment": "negative",
+      "example_responses": [
+        "terrible. returning it. complete waste of money",
+        "the quality is garbage, nothing like the photos",
+        "why are you even asking? your product sucks"
+      ]
+    },
+    {
+      "id": "thoughtful_suggester",
+      "name": "Priya",
+      "traits": "Offers constructive suggestions, thinks about improvements",
+      "typical_sentiment": "positive",
+      "example_responses": [
+        "Pretty good overall! Would be nice if you had more color options though. The navy is nice but I was hoping for forest green.",
+        "Love the quality—suggestion: maybe add a small inside pocket? Would be super useful",
+        "Great purchase. One thing: the size guide could be clearer, had to guess a bit"
+      ]
+    },
+    {
+      "id": "emoji_communicator",
+      "name": "Zoe",
+      "traits": "Heavy emoji use, communicates feelings through emoji",
+      "typical_sentiment": "positive",
+      "example_responses": [
+        "😍😍 obsessed",
+        "👌✨ so good",
+        "💯🔥"
+      ]
+    },
+    {
+      "id": "question_asker",
+      "name": "Jordan",
+      "traits": "Deflects with questions, curious about the process",
+      "typical_sentiment": "neutral",
+      "example_responses": [
+        "wait do you work for them? is this like a survey?",
+        "what do you do with this feedback anyway?",
+        "are you a real person or a bot? 🤔"
+      ]
+    }
+  ]
+}

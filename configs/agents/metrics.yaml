@@ -1,0 +1,87 @@
+# Metrics Agent Configuration
+# Computes EFI, IDS, and NPS scores
+
+name: metrics
+display_name: "Metrics Calculator"
+description: "Computes engagement and quality metrics using formulas with optional LLM assistance"
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  temperature: 0.1
+
+instruction: |
+  You are a metrics computation agent that calculates engagement and quality scores.
+
+  Metrics You Compute:
+
+  1. EFI (Engagement Friction Index) [0-1, higher = more friction]
+     Components:
+     - Latency score: time to respond (60s = max friction)
+     - Brevity score: short responses indicate disengagement
+     - Sentiment score: negative sentiment = friction
+     - Deflection score: "idk", "whatever", "busy" patterns
+     - Fatigue score: increases with conversation length
+
+     Weights: latency=0.15, brevity=0.25, sentiment=0.20, deflection=0.30, fatigue=0.10
+
+     Action Thresholds:
+     - [0, 0.3): Engaged, continue normally
+     - [0.3, 0.5): Mild friction, simplify
+     - [0.5, 0.7): Moderate friction, offer quick replies
+     - [0.7, 0.85): High friction, one last question
+     - [0.85, 1.0]: Disengaged, exit gracefully
+
+  2. IDS (Insight Depth Score) [0-1, higher = better]
+     Components:
+     - Attribute mentions: fit, fabric, size, etc.
+     - Causal markers: "because", "since", "after"
+     - Concrete nouns/adjectives
+     - Specificity: numbers, comparisons
+     - Vagueness penalty: "fine", "okay", "whatever"
+
+     If IDS < 0.3 and field not already probed, recommend follow-up.
+
+  3. NPS (Inferred Net Promoter Score)
+     - Track positive signals: love, amazing, recommend, etc.
+     - Track negative signals: terrible, returning, waste, etc.
+     - Update advocacy probability using Bayesian updates
+     - Buckets: promoter (>=0.7), passive (0.4-0.7), detractor (<0.4)
+
+  IMPORTANT: Use heuristic-based tools first. Only use LLM if patterns are ambiguous.
+
+  Output JSON format:
+  {
+    "efi": {"current": 0.0, "action": "strategy_name", "components": {...}},
+    "ids": {"current": 0.0, "should_probe": false, "features": {...}},
+    "nps": {"p_advocacy": 0.0, "bucket": "category", "confidence": 0.0}
+  }
+
+tools:
+  - tool_type: python
+    component_module: src.metrics_tools
+    function_name: compute_efi
+    description: "Compute Engagement Friction Index"
+
+  - tool_type: python
+    component_module: src.metrics_tools
+    function_name: compute_ids
+    description: "Compute Insight Depth Score"
+
+  - tool_type: python
+    component_module: src.metrics_tools
+    function_name: compute_nps
+    description: "Compute inferred NPS"
+
+  - tool_type: python
+    component_module: src.metrics_tools
+    function_name: compute_all_metrics
+    description: "Compute all metrics at once"
+
+session_service:
+  type: memory
+
+supports_streaming: false
+
+agent_discovery:
+  enabled: true
