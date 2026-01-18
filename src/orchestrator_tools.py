@@ -14,6 +14,11 @@ from datetime import datetime
 from enum import Enum
 import uuid
 
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+USER_CONTEXT_PATH = BASE_DIR / "user_context.txt"
+
 from .metrics_tools import (
     compute_all_metrics,
     choose_strategy,
@@ -101,6 +106,8 @@ class ConversationState:
     nps_logit: float
     last_metrics: Optional[Dict]
 
+    user_context: str
+
     def to_dict(self) -> Dict:
         return {
             "session_id": self.session_id,
@@ -121,6 +128,7 @@ class ConversationState:
             "ids_history": [round(i, 3) for i in self.ids_history],
             "nps_logit": round(self.nps_logit, 3),
             "last_metrics": self.last_metrics,
+            "user_context": self.user_context
         }
 
     @property
@@ -162,6 +170,10 @@ def create_session(
 
     now = datetime.utcnow()
 
+    with open(USER_CONTEXT_PATH, "r", encoding="utf-8") as f:
+        user_context_from_txt = f.read()
+
+
     state = ConversationState(
         session_id=session_id,
         survey_id=survey_id,
@@ -181,6 +193,7 @@ def create_session(
         ids_history=[],
         nps_logit=0.0,
         last_metrics=None,
+        user_context=user_context_from_txt
     )
 
     _sessions[session_id] = state

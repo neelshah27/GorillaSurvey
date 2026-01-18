@@ -10,10 +10,13 @@ Endpoints:
 
 import os
 import time
-from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import openai
+from typing import Dict, Any, List, Optional
+
+from src.agent_config import get_writer_config
+
 
 # Add parent directory to path for imports
 import sys
@@ -89,72 +92,173 @@ def get_openai_client():
     return openai.OpenAI(api_key=api_key)
 
 
-def generate_bot_message(context: dict) -> str:
-    """Generate a bot message using the Writer Agent logic."""
-    strategy = context.get("strategy", "continue_normal")
+
+def generate_bot_message(context: Dict[str, Any]) -> str:
+    """
+    Generate a bot message using:
+    - orchestrator-chosen strategy (context["strategy"])
+    - current field target (context["current_field"])
+    - recent chat history (context["recent_messages"])
+    - metrics snapshot (EFI/IDS/NPS bucket)
+    - writer.yaml config (model + instruction)
+    """
     brand_name = context.get("brand_name", "ThreadCraft")
-    current_field = context.get("current_field")
-    last_user_message = context.get("last_user_message", "")
+    strategy = context.get("strategy", "continue_normal")
+    current_field = context.get("current_field")  # dict or None
+    turn_count = int(context.get("turn_count", 0) or 0)
 
-    # For simple strategies, use templates
-    if strategy == "opening":
-        return context.get("opening_message", f"Hey! Thanks for shopping with {brand_name} 🧵 Mind if I ask a few quick questions about your recent order?")
+    opening_message = context.get(
+        "opening_message",
+        f"Hey! Thanks for shopping with {brand_name} 🧵 Mind if I ask a couple quick things about your order?"
+    )
+    closing_message = context.get(
+        "closing_message",
+        "Thanks so much for the feedback! Really appreciate you taking the time 🙏"
+    )
 
-    if strategy == "exit_graceful":
-        return context.get("closing_message", "Thanks so much for the feedback! Really appreciate you taking the time 🙏")
+    user_context = context.get("user_context")
 
-    # For other strategies, use LLM
-    try:
+    # Short-circuit strategies that should not hit the LLM
+    if strategy == "opening" or turn_count <= 1:
         client = get_openai_client()
 
-        system_prompt = f"""You write DM messages for {brand_name}, a friendly apparel brand.
+        prompt = f"""
+        say exactly what i am saying below
 
-BRAND VOICE:
-- Casual, warm, like texting a friend
-- Uses light emoji sparingly (1-2 max per message)
-- Never sounds like a survey
-- Short sentences, conversational rhythm
-- Acknowledges what user said first
-
-CURRENT STRATEGY: {strategy}
-- continue_normal: Natural transition to next topic
-- empathize_followup: Validate feeling, ask for specifics
-- quick_reply_options: Offer 3-4 emoji-labeled choices
-- summarize_confirm: Reflect back understanding
-- one_last_question: Frame as final, respect their time
-- ask_nps_direct: Ask recommendation question naturally
-
-RULES:
-- Keep messages under 30 words
-- Match energy to user's tone
-- Output ONLY the message text, nothing else"""
-
-        field_info = ""
-        if current_field:
-            field_info = f"\nNEXT TOPIC TO ASK ABOUT: {current_field.get('question_intent', 'general feedback')}"
-
-        user_prompt = f"""Last user message: "{last_user_message}"
-{field_info}
-Strategy to use: {strategy}
-
-Write the next DM message:"""
+        {user_context}
+        """
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "system", "content": "..."},
+                {"role": "user", "content": prompt},
             ],
-            max_tokens=100,
             temperature=0.7,
+            max_tokens=100,
         )
 
         return response.choices[0].message.content.strip()
+    if strategy == "exit_graceful":
+        return closing_message
+
+    # Load writer agent config (yaml) if available
+    model_name = "gpt-4o-mini"
+    temperature = 0.7
+    instruction = None
+    try:
+        cfg = get_writer_config()
+        model_cfg = (cfg.get("model") or {}) if isinstance(cfg, dict) else {}
+        model_name = model_cfg.get("name", model_name)
+        temperature = model_cfg.get("temperature", temperature)
+        instruction = cfg.get("instruction")
+    except Exception as e:
+        print(f"Writer config load error: {e}")
+
+    if not instruction:
+        # Safe default instruction if YAML missing
+        instruction = f"You write DM messages for {brand_name}, a friendly apparel brand."
+
+    # Pull small metrics snapshot (writer should FOLLOW strategy, metrics are only for tone)
+    current_efi = context.get("current_efi", None)
+    current_ids = context.get("current_ids", None)
+    nps_bucket = context.get("nps_bucket", "unknown")
+    fields_remaining = context.get("fields_remaining", None)
+
+    # Build field prompt
+    field_bits = ""
+    if isinstance(current_field, dict):
+        q_intent = current_field.get("question_intent", "general feedback")
+        q_text = current_field.get("question", None) or current_field.get("question_text", None)
+        response_type = current_field.get("response_type", None) or current_field.get("type", None)
+        field_bits = (
+            f"TARGET FIELD INTENT: {q_intent}\n"
+            f"TARGET FIELD QUESTION: {q_text or '(phrase naturally)'}\n"
+            f"TARGET FIELD RESPONSE TYPE: {response_type or 'text'}\n"
+        )
+
+    # Convert recent messages to OpenAI message format
+    recent_messages = context.get("recent_messages", []) or []
+    history: List[Dict[str, str]] = []
+    for m in recent_messages:
+        role = m.get("role")
+        text = m.get("text")
+        if not text:
+            continue
+        history.append({
+            "role": "assistant" if role == "bot" else "user",
+            "content": text
+        })
+
+    # Strategy-specific “hard requirements” (keeps policy consistent)
+    strategy_requirements = {
+        "continue_normal": "Naturally respond, then smoothly move toward the target field with ONE question.",
+        "empathize_followup": "Acknowledge emotion/feedback first, then ask ONE specific follow-up question to get details.",
+        "quick_reply_options": "Offer 3-5 quick reply options in one line. Keep it super short.",
+        "summarize_confirm": "Briefly reflect what the user said (1 sentence), then ask ONE confirm question.",
+        "one_last_question": "Frame it as the last quick thing, then ask ONE question.",
+        "ask_nps_direct": "Ask recommendation in a casual way. Use a 1–5 framing (1 = no, 5 = definitely).",
+    }
+    requirement = strategy_requirements.get(strategy, "Be natural and ask at most one question.")
+
+    # Prevent repeated greetings
+    no_greeting_rule = "Do NOT greet again (no 'hey', 'hey there', 'hi' openings) unless the user greeted you first."
+
+    system_prompt = f"""{instruction}
+
+CONTEXT (do not reveal):
+- Brand: {brand_name}
+- Strategy to implement: {strategy}
+- Fields remaining: {fields_remaining}
+- EFI: {current_efi} | IDS: {current_ids} | NPS bucket: {nps_bucket}
+
+STYLE:
+- Casual, DM-like, human.
+- Short message (under ~35 words).
+- 0-1 emoji usually.
+- Never mention "survey", "questionnaire", "rate", "scale of".
+- Ask at most ONE question total (except quick_reply_options which is still ONE question with options).
+- {no_greeting_rule}
+
+STRATEGY REQUIREMENT:
+- {requirement}
+
+{field_bits}
+OUTPUT: only the message text.
+""".strip()
+
+    # Director prompt: remind it what the user just said, and what to do next
+    last_user_message = context.get("last_user_message", None)
+    director = f"""Last user message: "{last_user_message}"
+
+Write the next message now.""".strip()
+
+    try:
+        client = get_openai_client()
+        resp = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                *history,
+                {"role": "user", "content": director},
+            ],
+            max_tokens=120,
+            temperature=temperature,
+        )
+        text = resp.choices[0].message.content.strip()
+
+        # Simple guard: avoid multiple questions
+        if strategy != "quick_reply_options" and text.count("?") > 1:
+            first = text.find("?")
+            text = text[: first + 1].strip()
+
+        return text
 
     except Exception as e:
-        # Fallback to simple templates
         print(f"LLM error: {e}")
         return get_fallback_message(strategy, current_field)
+
+
 
 
 def get_fallback_message(strategy: str, current_field: Optional[dict]) -> str:

@@ -6,6 +6,8 @@ Uses a combination of:
 2. LLM-based extraction (for complex/ambiguous cases)
 """
 
+import os, json
+import openai
 import re
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
@@ -49,6 +51,53 @@ class ExtractionResponse:
             ],
             "no_match_fields": self.no_match_fields,
         }
+
+def get_openai_client():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY not set")
+    return openai.OpenAI(api_key=api_key)
+
+def get_multi_extraction_prompt(text: str, field_ids: List[str]) -> str:
+    survey = get_survey()
+    field_specs = []
+    for fid in field_ids:
+        f = survey.get_field(fid)
+        if not f:
+            continue
+        valid_values_str = ", ".join(f.valid_values) if f.valid_values else "any text"
+        field_specs.append({
+            "field_id": fid,
+            "description": f.question_intent,
+            "valid_values": valid_values_str,
+            "field_type": f.field_type.value,
+        })
+
+    return f"""Extract the following survey fields from the user's message.
+
+Fields:
+{json.dumps(field_specs, indent=2)}
+
+User message: "{text}"
+
+Respond with JSON ONLY in this exact shape:
+{{
+  "extractions": [
+    {{
+      "field_id": "<field id>",
+      "extracted_value": <value or null>,
+      "confidence": <0.0 to 1.0>,
+      "reasoning": "<brief explanation>",
+      "quote": "<relevant snippet>"
+    }}
+  ]
+}}
+
+Rules:
+- If the message doesn't contain info for a field, set extracted_value to null and confidence to 0.
+- Be conservative: only extract if reasonably confident.
+- Use valid values when provided.
+"""
 
 
 # =============================================================================
@@ -315,45 +364,94 @@ EXTRACTORS = {
 }
 
 
-def extract_fields(
-    text: str,
-    target_fields: List[str],
-    session_id: str = "",
-    turn: int = 0,
-) -> ExtractionResponse:
-    """
-    Extract multiple fields from user text.
+def extract_fields(text: str, target_fields: List[str], session_id: str = "", turn: int = 0) -> ExtractionResponse:
+    client = get_openai_client()
+    prompt = get_multi_extraction_prompt(text, target_fields)
 
-    Args:
-        text: User's message
-        target_fields: List of field IDs to try extracting
-        session_id: Session identifier
-        turn: Current turn number
+    resp = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a precise information extraction engine."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.0,
+        max_tokens=400,
+    )
 
-    Returns:
-        ExtractionResponse with all extractions
-    """
-    extractions = []
-    no_match_fields = []
+    raw = resp.choices[0].message.content.strip()
 
-    for field_id in target_fields:
-        extractor = EXTRACTORS.get(field_id)
-        if extractor:
-            result = extractor(text)
-            if result.extracted_value is not None and result.confidence > 0:
-                extractions.append(result)
-            else:
-                no_match_fields.append(field_id)
+    # Parse JSON
+    data = json.loads(raw)
+    out: List[ExtractionResult] = []
+    no_match: List[str] = []
+
+    for item in data.get("extractions", []):
+        fid = item.get("field_id")
+        val = item.get("extracted_value", None)
+        conf = float(item.get("confidence", 0.0) or 0.0)
+        reasoning = item.get("reasoning", "")
+        quote = item.get("quote", "")
+
+        if fid in target_fields and val is not None and conf > 0:
+            out.append(ExtractionResult(fid, str(val), conf, reasoning, quote))
         else:
-            no_match_fields.append(field_id)
+            if fid in target_fields:
+                no_match.append(fid)
+
+        print(fid, val, conf, reasoning, quote)
+
+    # Any fields not present in response should be treated as no match
+    for fid in target_fields:
+        if fid not in [e.field_id for e in out] and fid not in no_match:
+            no_match.append(fid)
 
     return ExtractionResponse(
         session_id=session_id,
         turn=turn,
         user_text=text,
-        extractions=extractions,
-        no_match_fields=no_match_fields,
+        extractions=out,
+        no_match_fields=no_match,
     )
+
+# def extract_fields(
+#     text: str,
+#     target_fields: List[str],
+#     session_id: str = "",
+#     turn: int = 0,
+# ) -> ExtractionResponse:
+#     """
+#     Extract multiple fields from user text.
+
+#     Args:
+#         text: User's message
+#         target_fields: List of field IDs to try extracting
+#         session_id: Session identifier
+#         turn: Current turn number
+
+#     Returns:
+#         ExtractionResponse with all extractions
+#     """
+#     extractions = []
+#     no_match_fields = []
+
+#     for field_id in target_fields:
+#         extractor = EXTRACTORS.get(field_id)
+#         if extractor:
+#             result = extractor(text)
+#             if result.extracted_value is not None and result.confidence > 0:
+#                 extractions.append(result)
+#             else:
+#                 no_match_fields.append(field_id)
+#         else:
+#             no_match_fields.append(field_id)
+
+#     return ExtractionResponse(
+#         session_id=session_id,
+#         turn=turn,
+#         user_text=text,
+#         extractions=extractions,
+#         no_match_fields=no_match_fields,
+#     )
 
 
 def extract_all_fields(text: str, session_id: str = "", turn: int = 0) -> ExtractionResponse:

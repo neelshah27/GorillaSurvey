@@ -36,8 +36,11 @@ else
 fi
 
 # Activate virtual environment
-source venv/bin/activate
-
+if [ -f "venv/Scripts/activate" ]; then
+  source venv/Scripts/activate
+else
+  source venv/bin/activate
+fi
 # Install dependencies
 echo ""
 echo "[3/5] Installing dependencies..."
