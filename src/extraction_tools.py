@@ -80,22 +80,30 @@ FIT_PATTERNS = {
     "perfect": [
         r"\b(perfect|spot\s*on|exactly|just\s*right|true\s*to\s*size)\b",
         r"\bfit[s]?\s*(great|perfect|well|good)\b",
+        r"\btts\b",                      # common shorthand
+        r"\btrue\s*size\b",
+        r"\b(as\s*expected)\b",
     ],
     "slightly_small": [
         r"\b(small|tight|snug|short|narrow)\b",
         r"\b(size\s*up|bigger)\b",
         r"\bruns?\s*small\b",
+        r"\b(a\s*bit|little|slightly)\s*(tight|snug|small)\b",
     ],
     "slightly_large": [
         r"\b(large|big|loose|long|baggy|wide)\b",
         r"\b(size\s*down|smaller)\b",
         r"\bruns?\s*(large|big)\b",
+        r"\b(a\s*bit|little|slightly)\s*(loose|big|large|baggy)\b",
     ],
     "wrong_size": [
         r"\b(way\s*(too|off)|completely|totally)\s*(small|big|wrong|off)\b",
         r"\b(exchange|return|wrong\s*size)\b",
+        r"\b(doesn'?t\s*fit|didn'?t\s*fit)\b",
+        r"\b(fits?\s*more\s*like)\b",  # "fits like a small"
     ],
 }
+
 
 # Fabric quality patterns
 FABRIC_PATTERNS = {
@@ -137,6 +145,43 @@ RECOMMEND_PATTERNS = {
         r"(🤷|🤔)",
     ],
 }
+# Confidence tuning knobs
+FIELD_CONF_THRESHOLDS = {
+    # Fit answers are often short but still decisive ("tts", "runs small"),
+    # so allow a lower threshold for completion.
+    "fit_rating": 0.35,
+    "would_recommend": 0.40,
+    "overall_satisfaction": 0.45,
+    "fabric_quality": 0.45,
+    "improvement_suggestion": 0.55,  # usually longer, easier to be confident
+}
+
+DEFAULT_CONF_THRESHOLD = 0.50
+
+INTENSIFIERS = [
+    "really", "super", "very", "so", "extremely", "definitely",
+    "absolutely", "totally", "100", "100%", "for sure"
+]
+
+HEDGES = [
+    "kinda", "kind of", "sorta", "sort of", "maybe", "perhaps",
+    "i guess", "idk", "not sure", "meh"
+]
+
+
+def _has_any(text_lower: str, phrases: List[str]) -> bool:
+    return any(p in text_lower for p in phrases)
+
+
+def is_confident_enough(extraction: "ExtractionResult") -> bool:
+    """
+    Decide whether an extraction is strong enough to mark the field completed.
+    Use per-field thresholds so we don't get stuck re-asking fit, etc.
+    """
+    if extraction.extracted_value is None:
+        return False
+    threshold = FIELD_CONF_THRESHOLDS.get(extraction.field_id, DEFAULT_CONF_THRESHOLD)
+    return extraction.confidence >= threshold
 
 
 # =============================================================================
@@ -147,18 +192,67 @@ def match_patterns(text: str, patterns: Dict[str, List[str]]) -> Tuple[Optional[
     """
     Match text against pattern dictionary.
     Returns (matched_value, confidence, matched_quote).
+
+    Confidence is computed using:
+    - specificity of pattern
+    - number of matches found
+    - intensifiers / hedges in message
     """
     text_lower = text.lower()
 
-    for value, pattern_list in patterns.items():
-        for pattern in pattern_list:
-            match = re.search(pattern, text_lower, re.IGNORECASE)
-            if match:
-                # Higher confidence for more specific patterns
-                confidence = 0.7 if len(pattern) > 20 else 0.6
-                return value, confidence, match.group(0)
+    best_value = None
+    best_quote = ""
+    best_score = 0.0
 
-    return None, 0.0, ""
+    # Precompute message-level modifiers
+    has_intensifier = _has_any(text_lower, INTENSIFIERS)
+    has_hedge = _has_any(text_lower, HEDGES)
+
+    for value, pattern_list in patterns.items():
+        matches = []
+        max_pattern_len = 0
+
+        for pattern in pattern_list:
+            m = re.search(pattern, text_lower, re.IGNORECASE)
+            if m:
+                matches.append(m.group(0))
+                max_pattern_len = max(max_pattern_len, len(pattern))
+
+        if not matches:
+            continue
+
+        # Base score from specificity (0.55–0.80)
+        # Longer patterns are usually more specific ("true to size", "runs small")
+        if max_pattern_len >= 35:
+            score = 0.80
+        elif max_pattern_len >= 20:
+            score = 0.72
+        else:
+            score = 0.62
+
+        # More than one match -> bump confidence (up to +0.10)
+        score += min(0.10, 0.05 * (len(matches) - 1))
+
+        # Intensifier bump / hedge penalty
+        if has_intensifier:
+            score += 0.05
+        if has_hedge:
+            score -= 0.08
+
+        # Clamp
+        score = max(0.0, min(score, 0.95))
+
+        if score > best_score:
+            best_score = score
+            best_value = value
+            # Use the first matched snippet as quote
+            best_quote = matches[0]
+
+    if best_value is None:
+        return None, 0.0, ""
+
+    return best_value, best_score, best_quote
+
 
 
 def extract_overall_satisfaction(text: str) -> ExtractionResult:
@@ -270,10 +364,13 @@ def extract_improvement_suggestion(text: str) -> ExtractionResult:
             cleaned = cleaned.strip()
 
             if len(cleaned) > 10:  # Meaningful content
+                # Higher confidence if suggestion is concrete
+                concrete = bool(re.search(r"\b(more|less|change|add|remove|different|bigger|smaller|tighter|looser|longer|shorter)\b", text_lower))
+                conf = 0.85 if concrete else 0.70
                 return ExtractionResult(
                     field_id="improvement_suggestion",
-                    extracted_value=text,  # Keep original casing
-                    confidence=0.8,
+                    extracted_value=text,
+                    confidence=conf,
                     reasoning="Contains suggestion-like content",
                     quote=text[:100],
                 )
