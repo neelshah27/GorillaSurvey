@@ -201,7 +201,7 @@ Return only the message text.
     history: List[Dict[str, str]] = []
     for m in recent_messages:
         role = m.get("role")
-        text = m.get("text")
+        text = m.get("text")    
         if not text:
             continue
         history.append({
@@ -293,18 +293,18 @@ def generate_exit_message(context: Dict[str, Any]) -> str:
     # No questions, no prompts for more info.
     if nps_bucket == "promoter":
         return (
-            f"Thank you so much for the feedback and for supporting {brand_name}â€”"
+            f"Thank you so much for the feedback and for supporting {brand_name},”"
             "it really means a lot to us."
         )
     if nps_bucket == "detractor":
         return (
-            "Iâ€™m really sorry it didnâ€™t meet expectations. "
-            "Thank you for sharing your feedbackâ€”weâ€™ll use it to improve."
+            "I'm really sorry it didn't meet expectations. "
+            "Thank you for sharing your feedback' we'll use it to improve."
         )
     if nps_bucket == "passive":
-        return "Thanks so much for the feedback. Weâ€™ll use it to make improvements."
+        return "Thanks so much for the feedback. We'll use it to make improvements."
 
-    return "Thanks so much for the feedbackâ€”we really appreciate your time."
+    return "Thanks so much for the feedback, we really appreciate your time."
 
 
 

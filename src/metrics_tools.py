@@ -37,7 +37,6 @@ Return three numbers:
 1) efi: change to Engagement Friction Index (EFI), a value in [0, 1]
    - Positive  means MORE friction/disengagement (worse)
    - Negative  means LESS friction/more engaged (better)
-   keep in mind that we shouldn't drastically change the previous efi, unless there is a drastic thing the user says
    we want to base the efi off of this previous efi {prev_efi}
 
 2) nps: change to NPS advocacy probability proxy (we store it as a continuous value 0..1), delta in [-0.15, +0.15]
