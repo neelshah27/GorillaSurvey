@@ -12,7 +12,7 @@ import re
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 
-from .survey_schema import get_survey, FieldType
+from .survey_questions import get_question_map, get_question_ids
 
 
 @dataclass
@@ -59,23 +59,20 @@ def get_openai_client():
     return openai.OpenAI(api_key=api_key)
 
 def get_multi_extraction_prompt(text: str, field_ids: List[str]) -> str:
-    survey = get_survey()
+    question_map = get_question_map()
     field_specs = []
     for fid in field_ids:
-        f = survey.get_field(fid)
-        if not f:
+        q_text = question_map.get(fid)
+        if not q_text:
             continue
-        valid_values_str = ", ".join(f.valid_values) if f.valid_values else "any text"
         field_specs.append({
             "field_id": fid,
-            "description": f.question_intent,
-            "valid_values": valid_values_str,
-            "field_type": f.field_type.value,
+            "question_text": q_text,
         })
 
-    return f"""Extract the following survey fields from the user's message.
+    return f"""Extract the following question answers from the user's message.
 
-Fields:
+Questions:
 {json.dumps(field_specs, indent=2)}
 
 User message: "{text}"
@@ -96,7 +93,6 @@ Respond with JSON ONLY in this exact shape:
 Rules:
 - If the message doesn't contain info for a field, set extracted_value to null and confidence to 0.
 - Be conservative: only extract if reasonably confident.
-- Use valid values when provided.
 """
 
 
@@ -456,8 +452,7 @@ def extract_fields(text: str, target_fields: List[str], session_id: str = "", tu
 
 def extract_all_fields(text: str, session_id: str = "", turn: int = 0) -> ExtractionResponse:
     """Extract all survey fields from text."""
-    survey = get_survey()
-    target_fields = [f.field_id for f in survey.fields]
+    target_fields = get_question_ids()
     return extract_fields(text, target_fields, session_id, turn)
 
 
@@ -470,20 +465,16 @@ def get_extraction_prompt(text: str, field_id: str) -> str:
     Generate a prompt for LLM-based extraction.
     Use this when rule-based extraction fails or has low confidence.
     """
-    survey = get_survey()
-    field = survey.get_field(field_id)
+    question_map = get_question_map()
+    q_text = question_map.get(field_id)
 
-    if not field:
+    if not q_text:
         return ""
 
-    valid_values_str = ", ".join(field.valid_values) if field.valid_values else "any text"
-
-    return f"""Extract the following survey field from the user's message.
+    return f"""Extract the following question answer from the user's message.
 
 Field: {field_id}
-Description: {field.question_intent}
-Valid values: {valid_values_str}
-Field type: {field.field_type.value}
+Question: {q_text}
 
 User message: "{text}"
 

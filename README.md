@@ -167,7 +167,8 @@ invisible-feedback/
 │   ├── metrics_tools.py     # EFI, IDS, NPS formulas
 │   ├── extraction_tools.py  # Field extraction
 │   ├── orchestrator_tools.py# State management
-│   ├── survey_schema.py     # Survey definition
+│   ├── survey_questions.py  # Survey questions loader
+│   ├── survey_questions.json# Survey questions (plain text)
 │   ├── personas.py          # Demo personas
 │   └── analytics_tools.py   # Aggregation
 ├── frontend/

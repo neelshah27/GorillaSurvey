@@ -25,10 +25,11 @@ from .metrics_tools import (
     MetricsState,
     EFI_BASELINE,
 )
-from .survey_schema import (
-    get_survey,
-    SurveySchema,
-    SurveyField,
+from .survey_questions import (
+    get_question_map,
+    get_brand_name,
+    get_opening_message,
+    get_closing_message,
 )
 
 
@@ -107,6 +108,7 @@ class ConversationState:
     last_metrics: Optional[Dict]
 
     user_context: str
+    questions: Dict[str, str]
 
     def to_dict(self) -> Dict:
         return {
@@ -128,7 +130,8 @@ class ConversationState:
             "ids_history": [round(i, 3) for i in self.ids_history],
             "nps_logit": round(self.nps_logit, 3),
             "last_metrics": self.last_metrics,
-            "user_context": self.user_context
+            "user_context": self.user_context,
+            "questions": self.questions,
         }
 
     @property
@@ -145,8 +148,7 @@ class ConversationState:
 
     @property
     def completion_rate(self) -> float:
-        survey = get_survey()
-        total = len(survey.fields)
+        total = len(self.questions)
         completed = len(self.extracted_fields)
         return completed / total if total > 0 else 0.0
 
@@ -166,7 +168,7 @@ def create_session(
 ) -> ConversationState:
     """Create a new conversation session."""
     session_id = f"sess_{uuid.uuid4().hex[:12]}"
-    survey = get_survey()
+    question_map = get_question_map()
 
     now = datetime.utcnow()
 
@@ -185,15 +187,16 @@ def create_session(
         last_activity=now,
         messages=[],
         extracted_fields={},
-        fields_pending=[f.field_id for f in survey.get_fields_by_priority()],
+        fields_pending=list(question_map.keys()),
         fields_probed=[],
         current_strategy="opening",
-        next_field_target=survey.get_fields_by_priority()[0].field_id if survey.fields else None,
+        next_field_target=list(question_map.keys())[0] if question_map else None,
         efi_history=[EFI_BASELINE],
         ids_history=[],
         nps_logit=0.0,
         last_metrics=None,
-        user_context=user_context_from_txt
+        user_context=user_context_from_txt,
+        questions=question_map,
     )
 
     _sessions[session_id] = state
@@ -352,15 +355,8 @@ def mark_field_extracted(
         state.next_field_target = state.fields_pending[0]
     else:
         state.next_field_target = None
-        # Check if we should complete
         if state.status == ConversationStatus.IN_PROGRESS:
-            survey = get_survey()
-            required_fields = [f.field_id for f in survey.fields if f.required]
-            all_required_done = all(
-                f in state.extracted_fields for f in required_fields
-            )
-            if all_required_done:
-                state.status = ConversationStatus.COMPLETED
+            state.status = ConversationStatus.COMPLETED
 
     update_session(state)
     return state
@@ -389,27 +385,28 @@ def get_writer_context(state: ConversationState) -> Dict:
     """
     Build context for the writer agent to generate the next message.
     """
-    survey = get_survey()
-
     # Get last few messages for context
     recent_messages = state.messages[-4:] if len(state.messages) >= 4 else state.messages
 
     # Get current field info
     current_field = None
     if state.next_field_target:
-        current_field = survey.get_field(state.next_field_target)
+        question_text = state.questions.get(state.next_field_target)
+        current_field = {
+            "field_id": state.next_field_target,
+            "question_text": question_text,
+        }
 
     return {
         "session_id": state.session_id,
-        "brand_name": survey.brand_name,
-        "brand_voice": survey.brand_voice,
+        "brand_name": get_brand_name(),
         "strategy": state.current_strategy,
         "turn_count": state.turn_count,
 
         "recent_messages": [m.to_dict() for m in recent_messages],
         "last_user_message": state.messages[-1].text if state.messages and state.messages[-1].role == "user" else None,
 
-        "current_field": current_field.to_dict() if current_field else None,
+        "current_field": current_field,
         "fields_completed": state.fields_completed,
         "fields_remaining": len(state.fields_pending),
 
@@ -417,8 +414,8 @@ def get_writer_context(state: ConversationState) -> Dict:
         "current_ids": state.current_ids,
         "nps_bucket": state.last_metrics["nps"]["bucket"] if state.last_metrics else "unknown",
 
-        "opening_message": survey.opening_message,
-        "closing_message": survey.closing_message,
+        "opening_message": get_opening_message(),
+        "closing_message": get_closing_message(),
         "user_context": state.user_context,
     }
 

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Chat Routes - Handles conversation endpoints.
 
 Endpoints:
@@ -33,7 +33,6 @@ from src.orchestrator_tools import (
     ConversationStatus,
 )
 from src.extraction_tools import extract_all_fields
-from src.survey_schema import get_survey
 from src.personas import get_persona, get_persona_ids, get_scripted_response, get_persona_system_prompt
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -162,7 +161,7 @@ Return only the message text.
 
         return response.choices[0].message.content.strip()
     if strategy == "exit_graceful":
-        return closing_message
+        return generate_exit_message(context)
 
     # Load writer agent config (yaml) if available
     model_name = "gpt-4o-mini"
@@ -190,13 +189,11 @@ Return only the message text.
     # Build field prompt
     field_bits = ""
     if isinstance(current_field, dict):
-        q_intent = current_field.get("question_intent", "general feedback")
-        q_text = current_field.get("question", None) or current_field.get("question_text", None)
-        response_type = current_field.get("response_type", None) or current_field.get("type", None)
+        q_text = current_field.get("question_text") or current_field.get("question")
+        q_intent = current_field.get("question_intent") or q_text or "general feedback"
         field_bits = (
-            f"TARGET FIELD INTENT: {q_intent}\n"
-            f"TARGET FIELD QUESTION: {q_text or '(phrase naturally)'}\n"
-            f"TARGET FIELD RESPONSE TYPE: {response_type or 'text'}\n"
+            f"TARGET QUESTION INTENT: {q_intent}\n"
+            f"TARGET QUESTION TEXT: {q_text or '(phrase naturally)'}\n"
         )
 
     # Convert recent messages to OpenAI message format
@@ -245,8 +242,8 @@ STYLE:
 - Short message (under ~35 words).
 - 0-1 emoji usually.
 - Engage directly with what the user just said when relevant (e.g., apologize for negative feedback, affirm positive feedback).
-- Never mention "survey", "questionnaire", "rate", "scale of", or use "on a scale of..." / "would you say you are very satisfied..." phrasing.
-- Ask at most ONE question total (except quick_reply_options which is still ONE question with options).
+- Never mention "survey", "questionnaire", "rate", "scale from","scale of", or use "on a scale of..." / "would you say you are very satisfied..." phrasing.
+- Use the target question as intent and ask in your own words (do not copy the target question verbatim).
 - {no_greeting_rule}
 - {user_question_rule}
 
@@ -288,6 +285,28 @@ Write the next message now.""".strip()
         return get_fallback_message(strategy, current_field)
 
 
+def generate_exit_message(context: Dict[str, Any]) -> str:
+    """Generate a final, appreciative exit message based on NPS bucket."""
+    brand_name = context.get("brand_name", "GymFish")
+    nps_bucket = context.get("nps_bucket", "unknown")
+
+    # No questions, no prompts for more info.
+    if nps_bucket == "promoter":
+        return (
+            f"Thank you so much for the feedback and for supporting {brand_name}â€”"
+            "it really means a lot to us."
+        )
+    if nps_bucket == "detractor":
+        return (
+            "Iâ€™m really sorry it didnâ€™t meet expectations. "
+            "Thank you for sharing your feedbackâ€”weâ€™ll use it to improve."
+        )
+    if nps_bucket == "passive":
+        return "Thanks so much for the feedback. Weâ€™ll use it to make improvements."
+
+    return "Thanks so much for the feedbackâ€”we really appreciate your time."
+
+
 
 
 def get_fallback_message(strategy: str, current_field: Optional[dict]) -> str:
@@ -299,7 +318,7 @@ def get_fallback_message(strategy: str, current_field: Optional[dict]) -> str:
         "summarize_confirm": "Just to make sure I got that right—did I understand correctly?",
         "one_last_question": "Last thing—any quick feedback for us?",
         "ask_nps_direct": "Would you recommend us to a friend?",
-        "exit_graceful": "Thanks so much! Really appreciate your time 🙏",
+        "exit_graceful": "Thanks so much for the feedback—we really appreciate your time.",
     }
 
     return fallbacks.get(strategy, "Thanks for sharing! What else can you tell me?")
@@ -402,10 +421,11 @@ async def send_message(request: SendMessageRequest):
 
     # Check if conversation should end
     if state.status == ConversationStatus.COMPLETED:
-        survey = get_survey()
-        bot_response = survey.closing_message
+        context = get_writer_context(state)
+        bot_response = generate_exit_message(context)
     elif state.status == ConversationStatus.EXITED:
-        bot_response = "Thanks so much for the feedback! Really appreciate you 🙏"
+        context = get_writer_context(state)
+        bot_response = generate_exit_message(context)
     else:
         # Generate bot response
         context = get_writer_context(state)
@@ -500,3 +520,6 @@ async def list_personas():
         "count": len(personas),
         "personas": [p.to_dict() for p in personas]
     }
+
+
+
