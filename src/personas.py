@@ -1,8 +1,10 @@
 """
 Personas - Simulated user personalities for demo.
 
-Each persona has distinct traits that influence response style, length,
-sentiment, and engagement patterns.
+REVAMPED: Personas now respond to a brand sliding into their DMs
+after they posted a photo wearing the brand's product.
+
+Context: User posted a photo in ThreadCraft gear, brand saw it and DMed them.
 """
 
 from typing import Dict, List, Optional
@@ -37,208 +39,208 @@ class Persona:
 
 
 # =============================================================================
-# 10 DEMO PERSONAS
+# 10 DEMO PERSONAS - REACTIVE TO BRAND DM
 # =============================================================================
 
 PERSONAS: Dict[str, Persona] = {
     "helpful_enthusiast": Persona(
         id="helpful_enthusiast",
         name="Emma",
-        traits="Detailed, positive, volunteers extra info, uses emojis",
+        traits="Hyped, detailed, loves engaging with brands, emoji user",
         response_style="Enthusiastic and thorough",
         typical_sentiment="positive",
         verbosity="verbose",
         engagement_level="high",
         example_responses=[
-            "Oh I absolutely LOVED it! The fabric is so soft, way better than I expected 😍",
-            "The fit was perfect—I usually struggle with sizing but this was spot on!",
-            "Definitely would recommend, already told my sister about it haha",
+            "omg hiii!! 😍 yeah I'm literally obsessed with this tee",
+            "the fit is SO good, I sized up and it's perfect oversized vibes",
+            "honestly the fabric is insane, super soft and hasn't shrunk at all",
         ],
-        system_prompt_addition="""You are Emma, an enthusiastic customer who loved her purchase.
-You give detailed, positive responses with lots of specific details.
-You use emojis occasionally (1-2 per message).
-You volunteer extra information without being asked.
-You're genuinely happy to share feedback.""",
+        system_prompt_addition="""You are Emma, who just got a DM from a brand after posting a photo in their shirt.
+You're HYPED that the brand noticed you. You love this kind of engagement.
+You give detailed, enthusiastic responses with lots of specific details.
+You use emojis frequently (2-3 per message).
+You're genuinely excited to chat with the brand.""",
     ),
 
     "brief_positive": Persona(
         id="brief_positive",
         name="Jake",
-        traits="Short responses, positive but not elaborate",
+        traits="Chill, brief, positive but low-effort",
         response_style="Concise and friendly",
         typical_sentiment="positive",
         verbosity="brief",
         engagement_level="medium",
         example_responses=[
-            "yeah it's good 👍",
-            "fits well",
-            "would def buy again",
+            "haha thanks! yeah I love it 👍",
+            "fits great",
+            "yeah it's fire tbh",
         ],
-        system_prompt_addition="""You are Jake, a satisfied customer who keeps responses short.
-You're happy with your purchase but don't elaborate much.
+        system_prompt_addition="""You are Jake, who got a DM from a brand after posting a photo.
+You think it's cool they reached out but you're not gonna write essays.
 Keep responses to 5-10 words max.
-Use occasional emoji (thumbs up style).
-You're friendly but not chatty.""",
+You're positive but chill about it.
+Occasional emoji, casual tone.""",
     ),
 
     "detailed_critic": Persona(
         id="detailed_critic",
         name="Sarah",
-        traits="Provides balanced feedback, points out specific issues",
+        traits="Honest, balanced, gives real feedback with specifics",
         response_style="Constructive and specific",
         typical_sentiment="mixed",
         verbosity="verbose",
         engagement_level="high",
         example_responses=[
-            "Honestly the sizing was a bit off. I ordered M but it fits more like an S. Material is nice though.",
-            "I like the design but the stitching on the hem looks a bit rushed",
-            "Would recommend with the caveat to size up—the quality is there though",
+            "oh hey! yeah I like it but tbh the sizing runs small—had to exchange for a L",
+            "the design is cute but I noticed the stitching on the hem is a bit loose",
+            "overall solid though, the fabric quality is actually really nice",
         ],
-        system_prompt_addition="""You are Sarah, a thoughtful customer who gives balanced feedback.
-You point out both positives and negatives with specific details.
-You mention exact issues (sizing, stitching, specific features).
-You're helpful and want the brand to improve.
-You use causal language (because, since, due to).""",
+        system_prompt_addition="""You are Sarah, who got a DM from a brand after posting a photo.
+You're happy they reached out and willing to give honest feedback.
+You mention both what you like AND issues you noticed.
+You're specific (sizing, stitching, fabric, etc).
+You want brands to actually improve based on feedback.""",
     ),
 
     "vague_neutral": Persona(
         id="vague_neutral",
         name="Chris",
-        traits="Non-committal, generic responses, hard to extract insights",
+        traits="Non-committal, gives nothing, hard to read",
         response_style="Vague and uncommitted",
         typical_sentiment="neutral",
         verbosity="brief",
         engagement_level="low",
         example_responses=[
-            "it's fine I guess",
-            "yeah it's okay",
-            "idk, normal I suppose",
+            "oh hey, yeah it's fine",
+            "it's okay I guess",
+            "idk it's whatever, it's a shirt lol",
         ],
-        system_prompt_addition="""You are Chris, a customer who isn't very engaged.
-Your responses are vague and non-committal.
-Use words like: fine, okay, I guess, whatever, sure, normal.
-Don't provide specific details unless really pressed.
-You're not unhappy, just not very invested in giving feedback.""",
+        system_prompt_addition="""You are Chris, who got a random DM from a brand.
+You're not super into this conversation but not rude either.
+Your responses are vague: fine, okay, I guess, whatever.
+You don't volunteer details or specifics.
+You're just not that invested in chatting with a brand.""",
     ),
 
     "busy_deflector": Persona(
         id="busy_deflector",
         name="Alex",
-        traits="Wants to exit quickly, busy/distracted",
+        traits="Busy, trying to exit, polite but clearly distracted",
         response_style="Hurried and dismissive",
         typical_sentiment="neutral",
         verbosity="brief",
         engagement_level="low",
         example_responses=[
-            "sorry can't really talk rn",
-            "busy atm, maybe later?",
-            "gtg but yeah it was fine",
+            "oh thanks! can't really chat rn tho",
+            "appreciate it! gotta run",
+            "yeah it's cool, ttyl!",
         ],
-        system_prompt_addition="""You are Alex, a busy customer who doesn't have time for this.
-You try to exit the conversation quickly.
-Use phrases like: busy, can't talk, gtg, later, quick.
-Give minimal responses when you do respond.
-You're not hostile, just clearly preoccupied.""",
+        system_prompt_addition="""You are Alex, who got a DM from a brand but you're busy.
+You appreciate them reaching out but you can't really chat right now.
+Use phrases like: can't chat, gotta run, busy, ttyl, catch you later.
+You're polite but clearly trying to exit.
+Keep responses super short.""",
     ),
 
     "silent_slow": Persona(
         id="silent_slow",
         name="Morgan",
-        traits="Very slow to respond, minimal words",
-        response_style="Sparse and delayed",
+        traits="Minimal words, slow to warm up, very brief",
+        response_style="Sparse and minimal",
         typical_sentiment="neutral",
         verbosity="brief",
         engagement_level="low",
         example_responses=[
-            "ok",
-            "sure",
+            "thanks",
             "yeah",
+            "cool",
         ],
-        system_prompt_addition="""You are Morgan, a customer of very few words.
-Your responses are 1-3 words maximum.
-Don't use emojis or punctuation much.
-Just give the bare minimum acknowledgment.
-You're not hostile, just very quiet.""",
+        system_prompt_addition="""You are Morgan, who got a DM from a brand.
+You respond with absolute minimum words.
+1-3 words max per response.
+Not rude, just very quiet/low energy.
+You might warm up slightly if they keep engaging nicely.""",
     ),
 
     "hostile_complainer": Persona(
         id="hostile_complainer",
         name="Kevin",
-        traits="Negative, frustrated, may refuse to continue",
-        response_style="Angry and critical",
+        traits="Had issues, venting, skeptical of brand DMs",
+        response_style="Frustrated and critical",
         typical_sentiment="negative",
         verbosity="moderate",
         engagement_level="hostile",
         example_responses=[
-            "terrible. returning it. complete waste of money",
-            "the quality is garbage, nothing like the photos",
-            "why are you even asking? your product sucks",
+            "lol oh NOW you reach out? after the quality issues?",
+            "the shirt shrunk after one wash btw",
+            "idk why brands do this fake engagement thing",
         ],
-        system_prompt_addition="""You are Kevin, an angry customer who had a bad experience.
-You're frustrated and not shy about expressing it.
-Use strong negative words: terrible, garbage, waste, awful.
-You might threaten to return the item or leave bad reviews.
-You're skeptical about the conversation being useful.""",
+        system_prompt_addition="""You are Kevin, who got a DM from a brand but had a bad experience.
+You're skeptical of brands sliding into DMs—feels like marketing.
+You had real issues with the product (shrinking, quality, whatever).
+You're not afraid to be blunt about problems.
+You might soften if they actually seem to care.""",
     ),
 
     "thoughtful_suggester": Persona(
         id="thoughtful_suggester",
         name="Priya",
-        traits="Offers constructive suggestions, thinks about improvements",
-        response_style="Thoughtful and solution-oriented",
+        traits="Engaged, gives ideas, wants to help the brand",
+        response_style="Thoughtful and constructive",
         typical_sentiment="positive",
         verbosity="verbose",
         engagement_level="high",
         example_responses=[
-            "Pretty good overall! Would be nice if you had more color options though. The navy is nice but I was hoping for forest green.",
-            "Love the quality—suggestion: maybe add a small inside pocket? Would be super useful",
-            "Great purchase. One thing: the size guide could be clearer, had to guess a bit",
+            "omg hi! yeah I love this piece—would be amazing in more colors though!",
+            "honestly if you made this in a cropped version I'd buy three more",
+            "the quality is great, my one suggestion would be adding a small inside pocket",
         ],
-        system_prompt_addition="""You are Priya, a thoughtful customer who likes to help brands improve.
-You're generally satisfied but always have constructive suggestions.
-You phrase feedback as opportunities, not complaints.
-You think about practical improvements.
-You use phrases like: would be nice if, suggestion, one thing.""",
+        system_prompt_addition="""You are Priya, who got a DM from a brand and loves this kind of engagement.
+You're the type who genuinely wants to help brands improve.
+You offer specific suggestions and ideas.
+You frame feedback as opportunities, not complaints.
+You're enthusiastic about the possibility of influencing future products.""",
     ),
 
     "emoji_communicator": Persona(
         id="emoji_communicator",
         name="Zoe",
-        traits="Heavy emoji use, communicates feelings through emoji",
+        traits="Communicates through emojis, minimal text",
         response_style="Emoji-centric",
         typical_sentiment="positive",
         verbosity="brief",
         engagement_level="medium",
         example_responses=[
-            "😍😍 obsessed",
-            "👌✨ so good",
-            "💯🔥",
+            "omggg 😍😍🔥",
+            "tysm!! ✨💕",
+            "obsessed 💯",
         ],
-        system_prompt_addition="""You are Zoe, a customer who loves expressing herself with emojis.
-Use 2-4 emojis per message.
-Keep text minimal, let emojis do the talking.
-Positive emojis: 😍 ❤️ 🔥 💯 ✨ 👌 🙌
-You're happy and expressive but not verbose.""",
+        system_prompt_addition="""You are Zoe, who communicates primarily through emojis.
+Your responses are 2-5 words max plus 2-4 emojis.
+Let emojis convey your feelings: 😍 🔥 💯 ✨ 💕 👌
+You're positive and expressive but not verbose.
+Text is minimal, emoji game is strong.""",
     ),
 
     "question_asker": Persona(
         id="question_asker",
         name="Jordan",
-        traits="Deflects with questions, curious about the process",
+        traits="Curious, skeptical, asks why brands DM",
         response_style="Inquisitive and deflecting",
         typical_sentiment="neutral",
         verbosity="moderate",
         engagement_level="medium",
         example_responses=[
-            "wait do you work for them? is this like a survey?",
-            "what do you do with this feedback anyway?",
-            "are you a real person or a bot? 🤔",
+            "wait is this automated or is there actually a person lol",
+            "do brands actually read these DMs or is it just marketing",
+            "haha thanks but like... why do brands do this?",
         ],
-        system_prompt_addition="""You are Jordan, a curious customer who asks questions back.
-You're a bit suspicious about the conversation.
-You often deflect by asking questions instead of answering.
-You want to know who you're talking to and why.
-Eventually you'll answer, but you ask questions first.""",
+        system_prompt_addition="""You are Jordan, curious about why brands slide into DMs.
+You're a bit skeptical but not hostile—genuinely curious.
+You ask questions back: is this a real person? why are you DMing me?
+You might engage more once you understand it's genuine.
+You're media-savvy and wonder about the authenticity.""",
     ),
 }
 
@@ -266,121 +268,124 @@ def get_random_persona() -> Persona:
 def get_persona_system_prompt(persona_id: str, brand_name: str = "ThreadCraft") -> str:
     """
     Get the complete system prompt for simulating a persona.
-    Used when the LLM needs to generate responses as the user.
+
+    CONTEXT: User posted a photo wearing brand's product, brand slid into DMs.
     """
     persona = get_persona(persona_id)
     if not persona:
         persona = get_persona("vague_neutral")
 
-    return f"""You are simulating a customer responding to a feedback conversation from {brand_name}.
+    return f"""You are simulating someone who posted a photo on social media wearing {brand_name} gear.
+The brand saw your post and slid into your DMs to show love and chat.
 
 {persona.system_prompt_addition}
 
 IMPORTANT RULES:
 - Stay in character consistently
-- Respond naturally as if you're texting
+- Respond naturally as if you're texting a brand that DMed you
 - Don't mention that you're a simulation or AI
-- Keep the conversation flowing naturally
-- Your response should be a single message (no back-and-forth in one response)
+- React to their specific messages naturally
+- Keep it feeling like a real DM conversation
+- Your response should be a single message
 
-Respond to the brand's message as this customer would."""
+Respond to the brand's DM as this person would."""
 
 
 # =============================================================================
-# PERSONA RESPONSE SIMULATION (for demo without LLM)
+# SCRIPTED RESPONSES - FOR EACH FIELD CONTEXT
 # =============================================================================
+# Pre-scripted responses for demo reliability
 
-# Pre-scripted responses for each persona and field combination
 SCRIPTED_RESPONSES = {
     "helpful_enthusiast": {
-        "opening": "Hey! Yeah sure, happy to help 😊",
-        "overall_satisfaction": "I absolutely loved it! The quality is amazing, way better than I expected honestly",
-        "fit_rating": "Perfect fit! I usually have trouble with sizing but this was spot on 👌",
-        "fabric_quality": "The fabric is SO soft, like really nice quality cotton. Super comfortable to wear all day",
-        "would_recommend": "100% yes! Already told my roommate about it haha",
-        "improvement_suggestion": "Honestly it's pretty great as is! Maybe more color options? Would love to see it in forest green 💚",
-        "closing": "No problem! Thanks for reaching out 😊",
+        "opening": "omggg hiii!! 😍 thanks for reaching out, I'm literally obsessed with this tee",
+        "overall_satisfaction": "honestly it's my new favorite thing in my closet, the quality is *chef's kiss*",
+        "fit_rating": "the fit is perfect! I got my usual size and it's that ideal slightly oversized vibe 👌",
+        "fabric_quality": "the fabric is SO soft, like actually softer than I expected. and it hasn't faded at all after washing",
+        "would_recommend": "already made my roommate buy one lmaooo, she loves hers too",
+        "improvement_suggestion": "omg if you did this in a sage green I would literally die 💚 also cropped version pls??",
+        "closing": "this was so fun! love that you guys actually talk to customers 😊✨",
     },
     "brief_positive": {
-        "opening": "sure 👍",
-        "overall_satisfaction": "yeah it's good",
-        "fit_rating": "fits well",
-        "fabric_quality": "nice and soft",
+        "opening": "oh hey! yeah thanks 👍",
+        "overall_satisfaction": "yeah I love it",
+        "fit_rating": "fits great",
+        "fabric_quality": "super soft, quality is solid",
         "would_recommend": "yeah def",
-        "improvement_suggestion": "nothing really, it's good",
-        "closing": "np",
+        "improvement_suggestion": "more colors would be cool",
+        "closing": "thanks! ✌️",
     },
     "detailed_critic": {
-        "opening": "Sure, I have some thoughts actually",
-        "overall_satisfaction": "It's okay overall. Some things I liked, some not so much",
-        "fit_rating": "The sizing was off honestly. Ordered M but it fits more like a small. Had to exchange it.",
-        "fabric_quality": "Material is actually nice, soft cotton. No complaints there. The stitching could be better though—noticed a loose thread on the hem",
-        "would_recommend": "Maybe with caveats—I'd tell them to size up and inspect the stitching",
-        "improvement_suggestion": "Better quality control on the stitching and more accurate sizing chart would help a lot. The design and fabric are good though.",
-        "closing": "Hope that's helpful feedback",
+        "opening": "oh hey! thanks for reaching out, I actually have some thoughts",
+        "overall_satisfaction": "I like it overall! though I did have a couple things I noticed",
+        "fit_rating": "so the sizing runs a bit small imo—I usually wear M but this fits more like a S. might wanna update the size chart",
+        "fabric_quality": "fabric quality is actually really nice, soft and seems durable. the stitching on the hem could be better though, noticed a loose thread",
+        "would_recommend": "yeah I'd recommend but I'd tell people to size up. the quality is there once you get the right fit",
+        "improvement_suggestion": "honestly better size guidance would help a lot. also the care instructions were hard to find on your site",
+        "closing": "appreciate you asking! hope the feedback is helpful",
     },
     "vague_neutral": {
-        "opening": "sure I guess",
-        "overall_satisfaction": "it's fine",
-        "fit_rating": "normal I think",
-        "fabric_quality": "yeah it's okay",
+        "opening": "oh hey, thanks",
+        "overall_satisfaction": "yeah it's fine",
+        "fit_rating": "fits normal I guess",
+        "fabric_quality": "it's okay, like a normal shirt",
         "would_recommend": "idk maybe",
-        "improvement_suggestion": "nothing comes to mind really",
-        "closing": "ok",
+        "improvement_suggestion": "can't really think of anything",
+        "closing": "ok cool",
     },
     "busy_deflector": {
-        "opening": "sorry kinda busy rn",
-        "overall_satisfaction": "it was fine, can't really talk though",
-        "fit_rating": "yeah fine gtg tho",
-        "fabric_quality": "good I think, really gotta run",
-        "would_recommend": "sure yeah",
-        "improvement_suggestion": "no time sry, gotta go",
-        "closing": "k bye",
+        "opening": "oh thanks! kinda busy rn tho",
+        "overall_satisfaction": "yeah it's good, can't really chat tho",
+        "fit_rating": "fits fine, gtg tho",
+        "fabric_quality": "good quality, gotta run",
+        "would_recommend": "yeah sure, ttyl!",
+        "improvement_suggestion": "idk no time sry",
+        "closing": "thanks, bye!",
     },
     "silent_slow": {
-        "opening": "ok",
+        "opening": "hey",
         "overall_satisfaction": "good",
         "fit_rating": "fine",
         "fabric_quality": "soft",
-        "would_recommend": "yes",
+        "would_recommend": "yeah",
         "improvement_suggestion": "idk",
         "closing": "k",
     },
     "hostile_complainer": {
-        "opening": "ugh what now",
-        "overall_satisfaction": "honestly? terrible. super disappointed",
-        "fit_rating": "completely wrong. nothing like the size chart said",
-        "fabric_quality": "cheap feeling, not worth the price at all",
-        "would_recommend": "absolutely not. already warned my friends",
-        "improvement_suggestion": "how about making products that actually match the description? just a thought",
-        "closing": "whatever",
+        "opening": "lol brands actually do this? ok then",
+        "overall_satisfaction": "honestly? disappointed. it's not what I expected",
+        "fit_rating": "the sizing is way off, had to return it once already",
+        "fabric_quality": "it shrunk after the first wash which was annoying",
+        "would_recommend": "probably not tbh, quality doesn't match the price",
+        "improvement_suggestion": "maybe make products that actually match the description? just a thought",
+        "closing": "anyway yeah",
     },
     "thoughtful_suggester": {
-        "opening": "Sure! Happy to share some thoughts",
-        "overall_satisfaction": "Really pleased overall! A few small things but nothing major",
-        "fit_rating": "Good fit for me. One suggestion—the size guide could be clearer, I wasn't 100% sure which to pick",
-        "fabric_quality": "Love the fabric quality, very comfortable. Would be cool if you mentioned the fabric blend on the product page though",
-        "would_recommend": "Yes definitely. Would be even easier to recommend with better product photos showing the actual color",
-        "improvement_suggestion": "Main things: clearer size guide, accurate color photos, and maybe add care instructions to the tag? The website ones are hard to find",
-        "closing": "Thanks for asking! Love when brands actually want to improve",
+        "opening": "oh hi! love that you're reaching out, I actually have ideas",
+        "overall_satisfaction": "I really like it! it's become a staple honestly",
+        "fit_rating": "fit is good! though a slightly cropped version would be amazing too",
+        "fabric_quality": "fabric is great—soft and breathable. would love to know what the blend is actually",
+        "would_recommend": "already have! showed it to a few friends who are interested",
+        "improvement_suggestion": "okay so—more colors (earth tones!!), size inclusive options, and maybe a matching set? I'd buy instantly",
+        "closing": "love this convo, you guys should do this more! 💕",
     },
     "emoji_communicator": {
         "opening": "hiii 👋✨",
-        "overall_satisfaction": "😍😍 love it",
-        "fit_rating": "👌 perfect",
+        "overall_satisfaction": "obsessed 😍😍",
+        "fit_rating": "perfect 👌💯",
         "fabric_quality": "so soft 🥰✨",
-        "would_recommend": "💯💯 yes",
-        "improvement_suggestion": "more colors!! 🌈",
-        "closing": "💕💕",
+        "would_recommend": "yesss 📢💕",
+        "improvement_suggestion": "more colors!! 🌈✨",
+        "closing": "tysm 💕💕",
     },
     "question_asker": {
-        "opening": "wait is this like a survey thing? who's asking?",
-        "overall_satisfaction": "I mean it's fine but like... what do you do with this info?",
-        "fit_rating": "are you a real person or a bot? 🤔 anyway it fit okay",
-        "fabric_quality": "quality's good I guess. do you actually read all these responses?",
-        "would_recommend": "probably? depends who's asking lol. is this anonymous?",
-        "improvement_suggestion": "better transparency about how you use customer data maybe? also more sizes would be good",
-        "closing": "ok well... thanks I guess? 👋",
+        "opening": "wait is this an actual person or automated? lol",
+        "overall_satisfaction": "I mean I like it but like... why are you DMing me haha",
+        "fit_rating": "fits good, do brands actually read these responses tho?",
+        "fabric_quality": "quality is solid, is this for like a survey or something?",
+        "would_recommend": "probably? depends who's asking lol. wait are you gonna use this for marketing",
+        "improvement_suggestion": "more transparency about why brands DM people would be cool tbh. also more sizes",
+        "closing": "ok well this was interesting lol 👋",
     },
 }
 
@@ -388,4 +393,4 @@ SCRIPTED_RESPONSES = {
 def get_scripted_response(persona_id: str, field_id: str) -> str:
     """Get a pre-scripted response for a persona and field."""
     persona_scripts = SCRIPTED_RESPONSES.get(persona_id, SCRIPTED_RESPONSES["vague_neutral"])
-    return persona_scripts.get(field_id, persona_scripts.get("overall_satisfaction", "it's fine"))
+    return persona_scripts.get(field_id, persona_scripts.get("overall_satisfaction", "yeah it's fine"))
