@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invisible Feedback - Chat Demo</title>
     <link rel="stylesheet" href="/static/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
@@ -20,15 +20,7 @@
             <div class="control-panel">
                 <h3>Session Controls</h3>
 
-                <div class="form-group">
-                    <label for="persona-select">Select Persona</label>
-                    <select id="persona-select">
-                        <option value="">Loading personas...</option>
-                    </select>
-                </div>
-
                 <button id="start-btn" class="btn btn-primary">Start Conversation</button>
-                <button id="simulate-btn" class="btn btn-secondary" disabled>Simulate User Response</button>
             </div>
 
             <!-- Real-time Metrics -->
@@ -69,14 +61,6 @@
                 </div>
             </div>
 
-            <!-- Extracted Fields -->
-            <div class="extractions-panel">
-                <h3>Extracted Data</h3>
-                <div id="extractions-list" class="extractions-list">
-                    <p class="empty-state">No data extracted yet</p>
-                </div>
-            </div>
-
             <!-- Dashboard Link -->
             <div class="sidebar-footer">
                 <a href="/dashboard" class="btn btn-outline">Open Dashboard</a>
@@ -88,10 +72,10 @@
             <!-- Chat Header (Instagram-style) -->
             <div class="chat-header">
                 <div class="chat-avatar">
-                    <div class="avatar-circle">TC</div>
+                    <div class="avatar-circle">GF</div>
                 </div>
                 <div class="chat-info">
-                    <span class="chat-name">ThreadCraft</span>
+                    <span class="chat-name">GymFish_Official</span>
                     <span class="chat-status" id="chat-status">Start a conversation</span>
                 </div>
                 <div class="chat-actions">
@@ -99,33 +83,50 @@
                 </div>
             </div>
 
-            <!-- Messages Area -->
-            <div class="messages-area" id="messages-area">
-                <div class="empty-chat">
-                    <div class="empty-icon">💬</div>
-                    <p>Select a persona and click "Start Conversation"</p>
+            <div class="chat-body">
+                <!-- Messages Area -->
+                <div class="messages-area" id="messages-area">
+                    <div class="empty-chat">
+                        <div class="empty-icon">Chat</div>
+                        <p>Click "Start Conversation" to begin</p>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Input Area -->
-            <div class="input-area">
-                <div class="input-wrapper">
-                    <input
-                        type="text"
-                        id="message-input"
-                        placeholder="Type a message..."
-                        disabled
-                    >
-                    <button id="send-btn" class="send-btn" disabled>
-                        <svg viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                        </svg>
-                    </button>
+                <!-- Input Area -->
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <input
+                            type="text"
+                            id="message-input"
+                            placeholder="Type a message..."
+                            disabled
+                        >
+                        <button id="send-btn" class="send-btn" disabled>
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
         </main>
+
+        <aside class="progress-panel progress-standalone">
+            <div class="progress-header">
+                <h3>Survey Progress</h3>
+                <span class="progress-count" id="progress-count">0/0</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <p class="progress-note" id="progress-note">Waiting to start</p>
+            <div class="question-list" id="question-list">
+                <p class="empty-state">No questions loaded</p>
+            </div>
+        </aside>
     </div>
 
     <script src="/static/app.js"></script>
 </body>
 </html>
+

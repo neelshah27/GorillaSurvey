@@ -5,7 +5,7 @@
  * - Session management
  * - Message sending/receiving
  * - Real-time metrics display
- * - Persona simulation
+ * - Session management
  */
 
 // =============================================================================
@@ -14,9 +14,10 @@
 
 const state = {
     sessionId: null,
-    personaId: null,
     status: 'idle', // idle, active, completed, exited
     messageStartTime: null,
+    questions: {},
+    askedQuestions: new Set(),
 };
 
 // =============================================================================
@@ -24,9 +25,7 @@ const state = {
 // =============================================================================
 
 const elements = {
-    personaSelect: document.getElementById('persona-select'),
     startBtn: document.getElementById('start-btn'),
-    simulateBtn: document.getElementById('simulate-btn'),
     messagesArea: document.getElementById('messages-area'),
     messageInput: document.getElementById('message-input'),
     sendBtn: document.getElementById('send-btn'),
@@ -44,8 +43,11 @@ const elements = {
     npsBucket: document.getElementById('nps-bucket'),
     npsConfidence: document.getElementById('nps-confidence'),
 
-    // Extractions
-    extractionsList: document.getElementById('extractions-list'),
+    // Progress
+    progressCount: document.getElementById('progress-count'),
+    progressFill: document.getElementById('progress-fill'),
+    progressNote: document.getElementById('progress-note'),
+    questionList: document.getElementById('question-list'),
 };
 
 // =============================================================================
@@ -54,25 +56,14 @@ const elements = {
 
 const API_BASE = '';
 
-async function fetchPersonas() {
-    try {
-        const response = await fetch(`${API_BASE}/chat/personas`);
-        const data = await response.json();
-        return data.personas;
-    } catch (error) {
-        console.error('Failed to fetch personas:', error);
-        return [];
-    }
-}
-
-async function startChat(personaId) {
+async function startChat() {
     const response = await fetch(`${API_BASE}/chat/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             survey_id: 'apparel_post_purchase_v1',
             user_id: `demo_${Date.now()}`,
-            persona_id: personaId || null,
+            persona_id: null,
         }),
     });
     return response.json();
@@ -91,30 +82,14 @@ async function sendMessage(sessionId, text, latencyMs) {
     return response.json();
 }
 
-async function simulateUser(sessionId) {
-    const response = await fetch(`${API_BASE}/chat/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            session_id: sessionId,
-        }),
-    });
+async function fetchSessionState(sessionId) {
+    const response = await fetch(`${API_BASE}/chat/state/${sessionId}`);
     return response.json();
 }
 
 // =============================================================================
 // UI UPDATES
 // =============================================================================
-
-function populatePersonaSelect(personas) {
-    elements.personaSelect.innerHTML = '<option value="">No persona (manual input)</option>';
-    personas.forEach(persona => {
-        const option = document.createElement('option');
-        option.value = persona.id;
-        option.textContent = `${persona.name} - ${persona.traits}`;
-        elements.personaSelect.appendChild(option);
-    });
-}
 
 function addMessage(text, role, animate = true) {
     // Remove empty state if present
@@ -215,46 +190,6 @@ function updateMetrics(metrics) {
     }
 }
 
-function updateExtractions(extractions, existingFields = []) {
-    if (!extractions || extractions.length === 0) {
-        if (existingFields.length === 0) {
-            elements.extractionsList.innerHTML = '<p class="empty-state">No data extracted yet</p>';
-        }
-        return;
-    }
-
-    // Clear empty state
-    const emptyState = elements.extractionsList.querySelector('.empty-state');
-    if (emptyState) {
-        emptyState.remove();
-    }
-
-    extractions.forEach(extraction => {
-        // Check if already displayed
-        if (document.getElementById(`extraction-${extraction.field_id}`)) {
-            return;
-        }
-
-        const item = document.createElement('div');
-        item.className = 'extraction-item';
-        item.id = `extraction-${extraction.field_id}`;
-        item.innerHTML = `
-            <div class="extraction-field">${formatFieldName(extraction.field_id)}</div>
-            <div class="extraction-value">${extraction.extracted_value}</div>
-            <div class="extraction-quote">"${extraction.quote}"</div>
-            <div class="extraction-confidence">${Math.round(extraction.confidence * 100)}% confidence</div>
-        `;
-        elements.extractionsList.appendChild(item);
-    });
-}
-
-function formatFieldName(fieldId) {
-    return fieldId
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-}
-
 function updateStatus(status) {
     state.status = status;
 
@@ -271,8 +206,64 @@ function updateStatus(status) {
     const isActive = status === 'in_progress';
     elements.messageInput.disabled = !isActive;
     elements.sendBtn.disabled = !isActive;
-    elements.simulateBtn.disabled = !isActive || !state.personaId;
     elements.startBtn.disabled = isActive;
+}
+
+function renderProgress(sessionState) {
+    if (!sessionState || !sessionState.questions) {
+        elements.progressCount.textContent = '0/0';
+        elements.progressFill.style.width = '0%';
+        elements.progressNote.textContent = 'Waiting to start';
+        elements.questionList.innerHTML = '<p class="empty-state">No questions loaded</p>';
+        return;
+    }
+
+    const questions = sessionState.questions;
+    const entries = Object.entries(questions);
+    const total = entries.length;
+    const answered = new Set(Object.keys(sessionState.extracted_fields || {}));
+
+    if (sessionState.next_field_target) {
+        state.askedQuestions.add(sessionState.next_field_target);
+    }
+
+    const answeredCount = answered.size;
+    const percent = total > 0 ? Math.round((answeredCount / total) * 100) : 0;
+
+    elements.progressCount.textContent = `${answeredCount}/${total}`;
+    elements.progressFill.style.width = `${percent}%`;
+    elements.progressNote.textContent = total > 0
+        ? `${percent}% complete`
+        : 'Waiting to start';
+
+    if (total === 0) {
+        elements.questionList.innerHTML = '<p class="empty-state">No questions loaded</p>';
+        return;
+    }
+
+    elements.questionList.innerHTML = '';
+    entries.forEach(([id, text]) => {
+        const item = document.createElement('div');
+        const isAnswered = answered.has(id);
+        const isCurrent = sessionState.next_field_target === id && !isAnswered;
+        const isAsked = state.askedQuestions.has(id) && !isAnswered && !isCurrent;
+
+        item.className = 'question-item';
+        if (isAnswered) {
+            item.classList.add('answered');
+        } else if (isCurrent) {
+            item.classList.add('current');
+        } else if (isAsked) {
+            item.classList.add('asked');
+        }
+
+        item.innerHTML = `
+            <span class="status-dot"></span>
+            <span class="question-text">${text}</span>
+        `;
+
+        elements.questionList.appendChild(item);
+    });
 }
 
 function enableInput() {
@@ -292,14 +283,15 @@ function disableInput() {
 // =============================================================================
 
 async function handleStart() {
-    const personaId = elements.personaSelect.value;
-    state.personaId = personaId || null;
-
     try {
         elements.startBtn.disabled = true;
         elements.startBtn.textContent = 'Starting...';
 
-        const result = await startChat(personaId);
+        state.askedQuestions = new Set();
+        state.questions = {};
+        renderProgress(null);
+
+        const result = await startChat();
 
         state.sessionId = result.session_id;
         elements.sessionIdDisplay.textContent = result.session_id;
@@ -315,6 +307,14 @@ async function handleStart() {
 
         // Enable input
         enableInput();
+
+        try {
+            const sessionState = await fetchSessionState(state.sessionId);
+            state.questions = sessionState.questions || {};
+            renderProgress(sessionState);
+        } catch (error) {
+            console.error('Failed to load session state:', error);
+        }
 
         elements.startBtn.textContent = 'Start Conversation';
 
@@ -357,11 +357,16 @@ async function handleSend() {
         // Update metrics
         updateMetrics(result.metrics);
 
-        // Update extractions
-        updateExtractions(result.extractions, result.fields_completed);
-
         // Update status
         updateStatus(result.status);
+
+        try {
+            const sessionState = await fetchSessionState(state.sessionId);
+            state.questions = sessionState.questions || {};
+            renderProgress(sessionState);
+        } catch (error) {
+            console.error('Failed to refresh session state:', error);
+        }
 
         // Re-enable input if conversation continues
         if (result.status === 'in_progress') {
@@ -376,59 +381,19 @@ async function handleSend() {
     }
 }
 
-async function handleSimulate() {
-    if (!state.sessionId || !state.personaId) return;
-
-    elements.simulateBtn.disabled = true;
-    elements.simulateBtn.textContent = 'Simulating...';
-
-    try {
-        const result = await simulateUser(state.sessionId);
-
-        // Set the simulated message in input and send it
-        elements.messageInput.value = result.user_message;
-
-        // Small delay to show the message before sending
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        await handleSend();
-
-    } catch (error) {
-        console.error('Failed to simulate user:', error);
-        alert('Failed to simulate user response.');
-    } finally {
-        elements.simulateBtn.textContent = 'Simulate User Response';
-        if (state.status === 'in_progress' && state.personaId) {
-            elements.simulateBtn.disabled = false;
-        }
-    }
-}
-
 // =============================================================================
 // INITIALIZATION
 // =============================================================================
 
 async function init() {
-    // Load personas
-    const personas = await fetchPersonas();
-    populatePersonaSelect(personas);
-
     // Event listeners
     elements.startBtn.addEventListener('click', handleStart);
     elements.sendBtn.addEventListener('click', handleSend);
-    elements.simulateBtn.addEventListener('click', handleSimulate);
 
     elements.messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
-        }
-    });
-
-    elements.personaSelect.addEventListener('change', (e) => {
-        state.personaId = e.target.value || null;
-        if (state.status === 'in_progress') {
-            elements.simulateBtn.disabled = !state.personaId;
         }
     });
 
