@@ -102,7 +102,7 @@ def generate_bot_message(context: Dict[str, Any]) -> str:
     - metrics snapshot (EFI/IDS/NPS bucket)
     - writer.yaml config (model + instruction)
     """
-    brand_name = context.get("brand_name", "ThreadCraft")
+    brand_name = context.get("brand_name", "GymFish")
     strategy = context.get("strategy", "continue_normal")
     current_field = context.get("current_field")  # dict or None
     turn_count = int(context.get("turn_count", 0) or 0)
