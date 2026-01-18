@@ -719,19 +719,38 @@
             </div>
         </div>
 
-        <!-- Perception Map -->
+        <!-- Perception Maps -->
         <div class="stat-card full">
-            <div class="stat-header">Topic Perception Map</div>
-            <div class="stat-subtitle">Clusters show what people talk about vs. how it affects loyalty</div>
+            <div class="stat-header">What should we prioritize?</div>
+            <div class="stat-subtitle">High volume + negative sentiment = fix first</div>
             <div class="perception-map-container">
                 <div class="perception-map-wrapper">
-                    <div class="perception-map" id="perception-map">
+                    <div class="perception-map" id="perception-map-priority">
                         <div class="map-grid"></div>
-                        <div class="map-axis-label y">Engagement Quality (Low to High)</div>
-                        <div class="map-axis-label x">NPS Signal (Detractor to Promoter)</div>
-                        <svg class="perception-svg" id="perception-svg" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet"></svg>
+                        <div class="map-axis-label y">Volume (Few → Many mentions)</div>
+                        <div class="map-axis-label x">Topics</div>
+                        <svg class="perception-svg" id="perception-svg-priority" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet"></svg>
+                        <div class="dot-tooltip" id="dot-tooltip-priority">
+                            <div class="dot-tooltip-topic"></div>
+                            <div class="dot-tooltip-words"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card full">
+            <div class="stat-header">What actually drives loyalty?</div>
+            <div class="stat-subtitle">Topics that correlate with promoters vs detractors</div>
+            <div class="perception-map-container">
+                <div class="perception-map-wrapper">
+                    <div class="perception-map" id="perception-map-loyalty">
+                        <div class="map-grid"></div>
+                        <div class="map-axis-label y">NPS Impact (Detractors → Promoters)</div>
+                        <div class="map-axis-label x">Topics</div>
+                        <svg class="perception-svg" id="perception-svg-loyalty" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet"></svg>
                         <button class="map-info-btn" id="map-info-btn" title="View insights">i</button>
-                        <div class="dot-tooltip" id="dot-tooltip">
+                        <div class="dot-tooltip" id="dot-tooltip-loyalty">
                             <div class="dot-tooltip-topic"></div>
                             <div class="dot-tooltip-words"></div>
                         </div>
@@ -927,9 +946,11 @@
                 extractionsGrid.innerHTML = '<div class="empty-state">No extractions yet</div>';
             }
 
-            renderTopicMap(data.topic_clusters || [], data.session_points || []);
+            renderPriorityMap(data.topic_clusters || [], data.session_points || []);
+            renderLoyaltyMap(data.topic_clusters || [], data.session_points || []);
             renderSignals(data.topic_clusters || []);
-            renderConversationHealth(data.conversation_health || {});
+            renderConversationHealth(data.conversation_health || []);
+            renderMapInsights(data.topic_clusters || []);
         }
 
         function formatFieldName(fieldId) {
@@ -939,96 +960,26 @@
                 .join(' ');
         }
 
-        function renderTopicMap(clusters, points) {
-            const map = document.getElementById('perception-map');
-            const svg = document.getElementById('perception-svg');
-            const existingEmpty = map.querySelector('.empty-state');
-
-            if (!clusters.length) {
-                if (!existingEmpty) {
-                    const empty = document.createElement('div');
-                    empty.className = 'empty-state';
-                    empty.textContent = 'No topics yet';
-                    map.appendChild(empty);
-                }
-                svg.innerHTML = '';
-                return;
-            }
-
-            if (existingEmpty) {
-                existingEmpty.remove();
-            }
-
-            const palette = [
+        // Shared utilities for perception maps
+        const mapUtils = {
+            palette: [
                 '#1f7a8c', '#f59e0b', '#22c55e', '#8b5cf6', '#ef4444',
                 '#0ea5e9', '#f97316', '#14b8a6', '#d946ef', '#64748b',
-            ];
-            const topicColors = {};
-            clusters.forEach((cluster, idx) => {
-                topicColors[cluster.topic] = palette[idx % palette.length];
-            });
-
-            // Pre-defined cluster positions spread across the map (like t-SNE layout)
-            // Y values scaled for viewBox 0-60
-            const clusterBasePositions = {
-                sizing:   { x: 75, y: 15 },
-                colors:   { x: 55, y: 33 },
-                price:    { x: 25, y: 24 },
-                quality:  { x: 60, y: 45 },
-                shipping: { x: 85, y: 27 },
-                fabric:   { x: 40, y: 18 },
-                photos:   { x: 80, y: 12 },
-                returns:  { x: 30, y: 42 },
-                variety:  { x: 50, y: 51 },
-            };
-
-            const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
-
-            // Seeded random for consistent jitter
-            const jitterSeed = (str) => {
+            ],
+            clamp: (val, min, max) => Math.max(min, Math.min(max, val)),
+            jitterSeed: (str) => {
                 let hash = 0;
                 for (let i = 0; i < str.length; i += 1) {
                     hash = ((hash << 5) - hash) + str.charCodeAt(i);
                     hash |= 0;
                 }
                 return Math.abs(hash);
-            };
-
-            // Generate pseudo-random value from seed
-            const seededRandom = (seed) => {
+            },
+            seededRandom: (seed) => {
                 const x = Math.sin(seed) * 10000;
                 return x - Math.floor(x);
-            };
-
-            // Convert a point to map coordinates (viewBox is 100x60)
-            const toPoint = (p) => {
-                const seed = jitterSeed(`${p.session_id}-${p.topic}`);
-                const base = clusterBasePositions[p.topic] || { x: 50, y: 30 };
-
-                // Data-driven offset
-                const npsOffset = ((p.nps_score / 100) - 0.5) * 10;
-                const sentimentOffset = ((p.sentiment || 0.5) - 0.5) * 6;
-
-                // Random jitter for natural spread
-                const jitterX = (seededRandom(seed) - 0.5) * 12;
-                const jitterY = (seededRandom(seed + 1) - 0.5) * 8;
-
-                const x = clamp(base.x + npsOffset + jitterX, 5, 95);
-                const y = clamp(base.y - sentimentOffset + jitterY, 4, 56);
-
-                return { x, y };
-            };
-
-            const byTopic = {};
-            points.forEach((p) => {
-                if (!byTopic[p.topic]) {
-                    byTopic[p.topic] = [];
-                }
-                byTopic[p.topic].push(toPoint(p));
-            });
-
-            // Convex hull algorithm
-            const hullPoints = (pts) => {
+            },
+            hullPoints: (pts) => {
                 if (pts.length < 3) return pts;
                 const sorted = [...pts].sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
                 const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
@@ -1049,21 +1000,17 @@
                 upper.pop();
                 lower.pop();
                 return lower.concat(upper);
-            };
-
-            // Inflate hull outward from centroid
-            const inflate = (pts, factor = 1.25) => {
+            },
+            inflate: (pts, factor = 1.25) => {
                 if (!pts.length) return pts;
                 const cx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
                 const cy = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
                 return pts.map((p) => ({
-                    x: clamp(cx + (p.x - cx) * factor, 3, 97),
-                    y: clamp(cy + (p.y - cy) * factor, 3, 57),
+                    x: mapUtils.clamp(cx + (p.x - cx) * factor, 3, 97),
+                    y: mapUtils.clamp(cy + (p.y - cy) * factor, 3, 57),
                 }));
-            };
-
-            // Generate smooth curved path (rounded hull)
-            const smoothPath = (pts) => {
+            },
+            smoothPath: (pts) => {
                 if (pts.length === 0) return '';
                 if (pts.length === 1) {
                     const r = 4;
@@ -1075,57 +1022,142 @@
                     const r = Math.max(4, Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) / 2 + 2);
                     return `M ${cx - r} ${cy} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 -${r * 2} 0`;
                 }
-
-                // Create smooth bezier curve through hull points
                 let path = `M ${pts[0].x} ${pts[0].y}`;
                 for (let i = 0; i < pts.length; i++) {
                     const p0 = pts[(i - 1 + pts.length) % pts.length];
                     const p1 = pts[i];
                     const p2 = pts[(i + 1) % pts.length];
                     const p3 = pts[(i + 2) % pts.length];
-
-                    // Catmull-Rom to Bezier conversion
                     const tension = 0.5;
                     const cp1x = p1.x + (p2.x - p0.x) * tension / 3;
                     const cp1y = p1.y + (p2.y - p0.y) * tension / 3;
                     const cp2x = p2.x - (p3.x - p1.x) * tension / 3;
                     const cp2y = p2.y - (p3.y - p1.y) * tension / 3;
-
                     path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
                 }
                 path += ' Z';
                 return path;
+            },
+            // Resolve label positions to avoid overlaps
+            resolveLabels: (labelData, minDistX = 12, minDistY = 5) => {
+                const resolved = labelData.map(l => ({ ...l }));
+                // Sort by x position for consistent resolution
+                resolved.sort((a, b) => a.x - b.x);
+
+                // Multiple passes to push labels apart
+                for (let pass = 0; pass < 5; pass++) {
+                    for (let i = 0; i < resolved.length; i++) {
+                        for (let j = i + 1; j < resolved.length; j++) {
+                            const dx = resolved[j].x - resolved[i].x;
+                            const dy = resolved[j].y - resolved[i].y;
+                            const distX = Math.abs(dx);
+                            const distY = Math.abs(dy);
+
+                            // Check if overlapping
+                            if (distX < minDistX && distY < minDistY) {
+                                // Push apart vertically (easier to read)
+                                const pushY = (minDistY - distY) / 2 + 1;
+                                if (resolved[i].y < resolved[j].y) {
+                                    resolved[i].y = mapUtils.clamp(resolved[i].y - pushY, 4, 54);
+                                    resolved[j].y = mapUtils.clamp(resolved[j].y + pushY, 4, 54);
+                                } else {
+                                    resolved[i].y = mapUtils.clamp(resolved[i].y + pushY, 4, 54);
+                                    resolved[j].y = mapUtils.clamp(resolved[j].y - pushY, 4, 54);
+                                }
+                            }
+                        }
+                    }
+                }
+                return resolved;
+            }
+        };
+
+        // Priority Map: X = Sentiment, Y = Volume (frequency)
+        function renderPriorityMap(clusters, points) {
+            const map = document.getElementById('perception-map-priority');
+            const svg = document.getElementById('perception-svg-priority');
+            const existingEmpty = map.querySelector('.empty-state');
+
+            if (!clusters.length) {
+                if (!existingEmpty) {
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-state';
+                    empty.textContent = 'No topics yet';
+                    map.appendChild(empty);
+                }
+                svg.innerHTML = '';
+                return;
+            }
+
+            if (existingEmpty) existingEmpty.remove();
+
+            const topicColors = {};
+            clusters.forEach((cluster, idx) => {
+                topicColors[cluster.topic] = mapUtils.palette[idx % mapUtils.palette.length];
+            });
+
+            // Calculate volume stats for normalization
+            const volumes = clusters.map(c => c.volume || 1);
+            const maxVol = Math.max(...volumes, 1);
+            const minVol = Math.min(...volumes, 1);
+            const volRange = maxVol - minVol || 1;
+
+            // Build topic volume and index lookup
+            const topicVolume = {};
+            const topicIndex = {};
+            clusters.forEach((c, idx) => {
+                topicVolume[c.topic] = c.volume || 1;
+                topicIndex[c.topic] = idx;
+            });
+            const numTopics = clusters.length;
+
+            // Convert point to map coordinates
+            // X: Spread by topic index (bandage fix for visual clarity)
+            // Y: Volume (inverted so high volume is at top) -> 56-4
+            const toPoint = (p) => {
+                const seed = mapUtils.jitterSeed(`${p.session_id}-${p.topic}`);
+                const vol = topicVolume[p.topic] || 1;
+                const volNorm = (vol - minVol) / volRange; // 0-1
+                const idx = topicIndex[p.topic] || 0;
+
+                // X: spread topics evenly across the map based on index
+                const baseX = 10 + (idx / Math.max(numTopics - 1, 1)) * 80;
+                // Y: volume maps to bottom (low) -> top (high), so invert
+                const baseY = 56 - volNorm * 48;
+
+                // Add jitter for natural spread within each topic cluster
+                const jitterX = (mapUtils.seededRandom(seed) - 0.5) * 12;
+                const jitterY = (mapUtils.seededRandom(seed + 1) - 0.5) * 8;
+
+                return {
+                    x: mapUtils.clamp(baseX + jitterX, 5, 95),
+                    y: mapUtils.clamp(baseY + jitterY, 4, 56)
+                };
             };
+
+            const byTopic = {};
+            points.forEach((p) => {
+                if (!byTopic[p.topic]) byTopic[p.topic] = [];
+                byTopic[p.topic].push(toPoint(p));
+            });
 
             const hulls = Object.keys(byTopic).map((topic) => {
                 const pts = byTopic[topic];
-                const hull = inflate(hullPoints(pts), pts.length < 4 ? 1.4 : 1.25);
-                return {
-                    topic,
-                    color: topicColors[topic] || '#1f7a8c',
-                    path: smoothPath(hull),
-                };
+                const hull = mapUtils.inflate(mapUtils.hullPoints(pts), pts.length < 4 ? 1.4 : 1.25);
+                return { topic, color: topicColors[topic] || '#1f7a8c', path: mapUtils.smoothPath(hull) };
             });
 
-            // Store cluster data for tooltips - assign individual words to dots
             const clusterWords = {};
-            clusters.forEach((c) => {
-                clusterWords[c.topic] = c.words || [];
-            });
+            clusters.forEach((c) => { clusterWords[c.topic] = c.words || []; });
 
-            // Track word index per topic for round-robin assignment
             const wordIndex = {};
-
             const dots = points.map((p, idx) => {
                 const { x, y } = toPoint(p);
                 const color = topicColors[p.topic] || '#1f7a8c';
                 const words = clusterWords[p.topic] || [];
-
-                // Assign one specific word to this dot (round-robin through available words)
                 if (!wordIndex[p.topic]) wordIndex[p.topic] = 0;
                 const word = words.length > 0 ? words[wordIndex[p.topic] % words.length] : p.topic;
                 wordIndex[p.topic]++;
-
                 return `<circle class="topic-dot" cx="${x}" cy="${y}" r="1.2" fill="${color}" data-topic="${p.topic}" data-word="${word}" data-idx="${idx}" />`;
             });
 
@@ -1133,62 +1165,173 @@
             Object.keys(byTopic).forEach((topic) => {
                 const pts = byTopic[topic];
                 if (pts.length > 0) {
-                    const cx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
-                    const cy = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
-                    topicCentroids[topic] = { x: cx, y: cy };
+                    topicCentroids[topic] = {
+                        x: pts.reduce((sum, p) => sum + p.x, 0) / pts.length,
+                        y: pts.reduce((sum, p) => sum + p.y, 0) / pts.length
+                    };
                 }
             });
 
-            // Label offsets to position labels outside clusters (avoid overlap)
-            const labelOffsets = {
-                sizing:   { dx: 10, dy: -6 },
-                colors:   { dx: 8, dy: -5 },
-                price:    { dx: -8, dy: -5 },
-                quality:  { dx: 8, dy: -5 },
-                shipping: { dx: 8, dy: -5 },
-                fabric:   { dx: 10, dy: -4 },
-                photos:   { dx: 0, dy: -6 },
-                returns:  { dx: -8, dy: -5 },
-                variety:  { dx: 0, dy: -6 },
-            };
+            // Prepare label data for collision resolution
+            const labelData = clusters.map((cluster) => {
+                const centroid = topicCentroids[cluster.topic] || { x: 50, y: 30 };
+                return {
+                    topic: cluster.topic,
+                    x: mapUtils.clamp(centroid.x, 10, 90),
+                    y: mapUtils.clamp(centroid.y - 4, 4, 54),
+                    color: topicColors[cluster.topic] || '#1f7a8c'
+                };
+            });
 
-            const labels = clusters.map((cluster) => {
-                const centroid = topicCentroids[cluster.topic];
-                const base = clusterBasePositions[cluster.topic] || { x: 50, y: 30 };
-                const offset = labelOffsets[cluster.topic] || { dx: 0, dy: -5 };
-                const cx = centroid ? centroid.x : base.x;
-                const cy = centroid ? centroid.y : base.y;
-                const x = clamp(cx + offset.dx, 10, 90);
-                const y = clamp(cy + offset.dy, 4, 54);
-                const text = cluster.topic.toUpperCase();
+            // Resolve overlapping labels
+            const resolvedLabels = mapUtils.resolveLabels(labelData);
+
+            const labels = resolvedLabels.map((label) => {
+                const text = label.topic.toUpperCase();
                 const labelWidth = Math.max(7, text.length * 1.1);
                 return `
                     <g>
-                        <rect class="topic-label-bg" x="${x - labelWidth / 2}" y="${y - 1.6}" width="${labelWidth}" height="3"></rect>
-                        <text class="topic-label" x="${x}" y="${y + 0.4}" text-anchor="middle" fill="${topicColors[cluster.topic] || '#1f7a8c'}">${text}</text>
+                        <rect class="topic-label-bg" x="${label.x - labelWidth / 2}" y="${label.y - 1.6}" width="${labelWidth}" height="3"></rect>
+                        <text class="topic-label" x="${label.x}" y="${label.y + 0.4}" text-anchor="middle" fill="${label.color}">${text}</text>
                     </g>
                 `;
             });
 
             svg.innerHTML = `
-                ${hulls.map((h) => `
-                    <path class="topic-hull" d="${h.path}" fill="${h.color}" stroke="${h.color}"></path>
-                `).join('')}
+                ${hulls.map((h) => `<path class="topic-hull" d="${h.path}" fill="${h.color}" stroke="${h.color}"></path>`).join('')}
                 ${dots.join('')}
                 ${labels.join('')}
             `;
 
-            // Add dot hover/click handlers
-            setupDotInteractions();
-
-            // Update insights panel
-            renderMapInsights(clusters);
+            setupDotInteractions('priority');
         }
 
-        function setupDotInteractions() {
-            const svg = document.getElementById('perception-svg');
-            const tooltip = document.getElementById('dot-tooltip');
-            const map = document.getElementById('perception-map');
+        // Loyalty Map: X = Sentiment, Y = Session NPS (per-session, not topic-level)
+        function renderLoyaltyMap(clusters, points) {
+            const map = document.getElementById('perception-map-loyalty');
+            const svg = document.getElementById('perception-svg-loyalty');
+            const existingEmpty = map.querySelector('.empty-state');
+
+            if (!clusters.length) {
+                if (!existingEmpty) {
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-state';
+                    empty.textContent = 'No topics yet';
+                    map.appendChild(empty);
+                }
+                svg.innerHTML = '';
+                return;
+            }
+
+            if (existingEmpty) existingEmpty.remove();
+
+            const topicColors = {};
+            const topicIndex = {};
+            clusters.forEach((cluster, idx) => {
+                topicColors[cluster.topic] = mapUtils.palette[idx % mapUtils.palette.length];
+                topicIndex[cluster.topic] = idx;
+            });
+            const numTopics = clusters.length;
+
+            // Convert point to map coordinates
+            // X: Spread by topic index (bandage fix for visual clarity)
+            // Y: Session NPS (0-100) - uses the actual session's NPS
+            const toPoint = (p) => {
+                const seed = mapUtils.jitterSeed(`${p.session_id}-${p.topic}`);
+                const idx = topicIndex[p.topic] || 0;
+                // Use the session's actual NPS score for Y-axis spread
+                const nps = p.nps_score !== undefined ? p.nps_score : 50;
+
+                // X: spread topics evenly across the map based on index
+                const baseX = 10 + (idx / Math.max(numTopics - 1, 1)) * 80;
+                // Y: NPS maps to bottom (detractors, 0) -> top (promoters, 100)
+                const baseY = 56 - (nps / 100) * 48;
+
+                const jitterX = (mapUtils.seededRandom(seed) - 0.5) * 12;
+                const jitterY = (mapUtils.seededRandom(seed + 1) - 0.5) * 8;
+
+                return {
+                    x: mapUtils.clamp(baseX + jitterX, 5, 95),
+                    y: mapUtils.clamp(baseY + jitterY, 4, 56)
+                };
+            };
+
+            const byTopic = {};
+            points.forEach((p) => {
+                if (!byTopic[p.topic]) byTopic[p.topic] = [];
+                byTopic[p.topic].push(toPoint(p));
+            });
+
+            const hulls = Object.keys(byTopic).map((topic) => {
+                const pts = byTopic[topic];
+                const hull = mapUtils.inflate(mapUtils.hullPoints(pts), pts.length < 4 ? 1.4 : 1.25);
+                return { topic, color: topicColors[topic] || '#1f7a8c', path: mapUtils.smoothPath(hull) };
+            });
+
+            const clusterWords = {};
+            clusters.forEach((c) => { clusterWords[c.topic] = c.words || []; });
+
+            const wordIndex = {};
+            const dots = points.map((p, idx) => {
+                const { x, y } = toPoint(p);
+                const color = topicColors[p.topic] || '#1f7a8c';
+                const words = clusterWords[p.topic] || [];
+                if (!wordIndex[p.topic]) wordIndex[p.topic] = 0;
+                const word = words.length > 0 ? words[wordIndex[p.topic] % words.length] : p.topic;
+                wordIndex[p.topic]++;
+                return `<circle class="topic-dot" cx="${x}" cy="${y}" r="1.2" fill="${color}" data-topic="${p.topic}" data-word="${word}" data-idx="${idx}" />`;
+            });
+
+            const topicCentroids = {};
+            Object.keys(byTopic).forEach((topic) => {
+                const pts = byTopic[topic];
+                if (pts.length > 0) {
+                    topicCentroids[topic] = {
+                        x: pts.reduce((sum, p) => sum + p.x, 0) / pts.length,
+                        y: pts.reduce((sum, p) => sum + p.y, 0) / pts.length
+                    };
+                }
+            });
+
+            // Prepare label data for collision resolution
+            const labelData = clusters.map((cluster) => {
+                const centroid = topicCentroids[cluster.topic] || { x: 50, y: 30 };
+                return {
+                    topic: cluster.topic,
+                    x: mapUtils.clamp(centroid.x, 10, 90),
+                    y: mapUtils.clamp(centroid.y - 4, 4, 54),
+                    color: topicColors[cluster.topic] || '#1f7a8c'
+                };
+            });
+
+            // Resolve overlapping labels
+            const resolvedLabels = mapUtils.resolveLabels(labelData);
+
+            const labels = resolvedLabels.map((label) => {
+                const text = label.topic.toUpperCase();
+                const labelWidth = Math.max(7, text.length * 1.1);
+                return `
+                    <g>
+                        <rect class="topic-label-bg" x="${label.x - labelWidth / 2}" y="${label.y - 1.6}" width="${labelWidth}" height="3"></rect>
+                        <text class="topic-label" x="${label.x}" y="${label.y + 0.4}" text-anchor="middle" fill="${label.color}">${text}</text>
+                    </g>
+                `;
+            });
+
+            svg.innerHTML = `
+                ${hulls.map((h) => `<path class="topic-hull" d="${h.path}" fill="${h.color}" stroke="${h.color}"></path>`).join('')}
+                ${dots.join('')}
+                ${labels.join('')}
+            `;
+
+            setupDotInteractions('loyalty');
+        }
+
+        function setupDotInteractions(mapType) {
+            const svg = document.getElementById(`perception-svg-${mapType}`);
+            const tooltip = document.getElementById(`dot-tooltip-${mapType}`);
+
+            if (!svg || !tooltip) return;
 
             svg.querySelectorAll('.topic-dot').forEach((dot) => {
                 dot.addEventListener('mouseenter', (e) => {
