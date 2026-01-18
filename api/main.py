@@ -20,6 +20,7 @@ load_dotenv()
 # Import routers
 from api.routes.chat import router as chat_router
 from api.routes.analytics import router as analytics_router
+from src.mock_data import seed_mock_sessions
 
 # Create FastAPI app
 app = FastAPI(
@@ -109,6 +110,8 @@ async def startup_event():
     """Initialize on startup."""
     print("🚀 Invisible Feedback API starting...")
     print(f"📁 Frontend directory: {frontend_dir}")
+
+    seed_mock_sessions()
 
     # Check for OpenAI API key
     if os.getenv("OPENAI_API_KEY"):

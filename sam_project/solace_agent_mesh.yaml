@@ -1,0 +1,135 @@
+# GorillaSurvey SAM Configuration
+
+log:
+  stdout_log_level: INFO
+  log_file_level: DEBUG
+  log_file: sam.log
+
+shared_config:
+  - broker_connection: &broker_connection
+      dev_mode: true
+      broker_url: ws://localhost:8008
+      broker_username: default
+      broker_password: default
+      broker_vpn: default
+      temporary_queue: true
+
+  - models:
+      planning: &planning_model
+        model: ${LLM_SERVICE_PLANNING_MODEL_NAME, gpt-4o-mini}
+        api_base: ${LLM_SERVICE_ENDPOINT, https://api.openai.com/v1}
+        api_key: ${LLM_SERVICE_API_KEY}
+
+      general: &general_model
+        model: ${LLM_SERVICE_GENERAL_MODEL_NAME, gpt-4o-mini}
+        api_base: ${LLM_SERVICE_ENDPOINT, https://api.openai.com/v1}
+        api_key: ${LLM_SERVICE_API_KEY}
+
+  - services:
+      artifact_service: &default_artifact_service
+        type: memory
+        artifact_scope: namespace
+
+apps:
+  # ============= WebUI Gateway =============
+  - name: webui_gateway
+    app_base_path: .
+    app_module: solace_agent_mesh.gateway.http_sse.app
+    broker:
+      <<: *broker_connection
+    app_config:
+      namespace: ${NAMESPACE, gorilla_survey}
+      session_secret_key: "gorilla-survey-secret-key"
+      artifact_service: *default_artifact_service
+      session_service:
+        type: memory
+        default_behavior: PERSISTENT
+      gateway_id: gorilla_webui
+      fastapi_host: 0.0.0.0
+      fastapi_port: 5001
+      cors_allowed_origins: ["*"]
+      default_agent_name: SurveyAgent
+      frontend_use_authorization: false
+      enable_embed_resolution: true
+      system_purpose: |
+        You are GorillaSurvey - an invisible feedback system that collects
+        survey data through natural DM-style conversations.
+
+        You help ThreadCraft connect with customers who posted photos
+        wearing their products. Be warm, genuine, and conversational.
+        Never sound like a survey bot.
+      response_format: |
+        Be warm and conversational. Keep messages under 25 words.
+        React to what the user says before moving on.
+      frontend_welcome_message: |
+        Welcome to GorillaSurvey Demo!
+
+        I'm ThreadCraft's friendly brand rep. Try saying:
+        - "Hi, I just posted a photo in your tee"
+        - "I love the shirt!"
+        - "The fit is a bit small"
+      frontend_bot_name: ThreadCraft
+
+  # ============= Survey Agent =============
+  - name: survey_agent
+    app_base_path: .
+    app_module: solace_agent_mesh.agent.sac.app
+    broker:
+      <<: *broker_connection
+    app_config:
+      namespace: ${NAMESPACE, gorilla_survey}
+      agent_name: SurveyAgent
+      display_name: Survey Agent
+      model: *planning_model
+      supports_streaming: true
+
+      instruction: |
+        You are the social media voice for ThreadCraft, reaching out after seeing
+        someone post a photo wearing your brand. You're warm and genuine.
+
+        THE SCENARIO:
+        - User posted a photo wearing ThreadCraft gear
+        - You genuinely appreciate them wearing your brand
+        - You want to connect naturally and hear what they think
+
+        YOUR TONE:
+        - Warm and friendly, like a brand rep who actually cares
+        - Genuine appreciation, not forced enthusiasm
+        - Conversational, casual but not over-the-top
+        - Keep responses under 25 words
+
+        RULES:
+        - NEVER use: "rate", "scale", "feedback", "survey", "question"
+        - NEVER ask multiple things at once
+        - DO react to what they say before moving on
+        - DO match their energy level
+
+        CONVERSATION FLOW:
+        1. Start with warm greeting about their post
+        2. Ask how it felt wearing it
+        3. Naturally discuss fit, fabric, style
+        4. Thank them warmly
+
+        Example opener: "Hey — saw your post in our tee. It really suits you. How did it feel wearing it?"
+
+      session_service:
+        type: memory
+        default_behavior: PERSISTENT
+      artifact_service: *default_artifact_service
+
+      agent_card:
+        description: Conducts natural, warm survey conversations
+        defaultInputModes: [text]
+        defaultOutputModes: [text]
+        skills:
+          - id: survey_chat
+            name: Survey Conversation
+            description: Engage in natural DM-style feedback conversations
+
+      agent_card_publishing:
+        interval_seconds: 30
+      agent_discovery:
+        enabled: true
+      inter_agent_communication:
+        allow_list: ["*"]
+        request_timeout_seconds: 300

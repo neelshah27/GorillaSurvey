@@ -11,7 +11,6 @@ import re
 from typing import Dict, List, Optional, Any
 from collections import Counter
 from dataclasses import dataclass
-
 from .orchestrator_tools import (
     get_all_sessions,
     get_session_summary,
@@ -97,6 +96,172 @@ def extract_themes_from_sessions(sessions: List[ConversationState]) -> Dict[str,
 
     return dict(theme_counts)
 
+
+# =============================================================================
+# INSIGHT CLUSTERS + HEALTH METRICS
+# =============================================================================
+
+STOPWORDS = {
+    "the", "and", "but", "with", "that", "this", "for", "are", "was", "were",
+    "your", "you", "our", "just", "like", "really", "have", "has", "had",
+    "from", "they", "them", "their", "when", "what", "how", "its",
+    "into", "about", "would", "could", "should", "been", "than", "then",
+    "also", "there", "here", "more", "less", "much", "very", "feel", "felt",
+}
+
+
+def _sentiment_from_nps(p_advocacy: Optional[float]) -> float:
+    if p_advocacy is None:
+        return 0.0
+    return max(-1.0, min(1.0, (p_advocacy - 0.5) * 2.0))
+
+
+def _extract_keywords(texts: List[str], limit: int = 5) -> List[str]:
+    tokens: List[str] = []
+    for text in texts:
+        tokens.extend(re.findall(r"[a-zA-Z']{3,}", text.lower()))
+    tokens = [t for t in tokens if t not in STOPWORDS]
+    counts = Counter(tokens)
+    return [w for w, _ in counts.most_common(limit)]
+
+
+def compute_topic_clusters(sessions: List[ConversationState]) -> List[Dict[str, Any]]:
+    """Compute topic clusters with NPS and engagement quality positioning.
+
+    Uses NPS for X-axis positioning and inverted EFI (engagement quality) for Y-axis.
+    """
+    theme_sessions: Dict[str, List[ConversationState]] = {k: [] for k in THEME_PATTERNS}
+    theme_texts: Dict[str, List[str]] = {k: [] for k in THEME_PATTERNS}
+
+    for session in sessions:
+        user_texts = [m.text for m in session.messages if m.role == "user"]
+        suggestion = session.extracted_fields.get("improvement_suggestion")
+        if suggestion and suggestion.value:
+            user_texts.append(str(suggestion.value))
+        combined = " ".join(user_texts)
+        for theme, patterns in THEME_PATTERNS.items():
+            if any(re.search(pat, combined.lower()) for pat in patterns):
+                theme_sessions[theme].append(session)
+                theme_texts[theme].extend(user_texts)
+
+    clusters: List[Dict[str, Any]] = []
+    for theme, matched in theme_sessions.items():
+        if not matched:
+            continue
+
+        nps_vals = []
+        engagement_vals = []
+        for s in matched:
+            nps_info = (s.last_metrics or {}).get("nps") or {}
+            p_adv = nps_info.get("p_advocacy")
+            if isinstance(p_adv, (int, float)):
+                nps_vals.append(float(p_adv))
+
+            # Use inverted EFI as engagement quality (low friction = high quality)
+            efi = s.current_efi if s.efi_history else 0.5
+            engagement_vals.append(1.0 - efi)
+
+        avg_nps = sum(nps_vals) / len(nps_vals) if nps_vals else 0.5
+        avg_engagement = sum(engagement_vals) / len(engagement_vals) if engagement_vals else 0.5
+
+        words = _extract_keywords(theme_texts[theme], limit=4)
+        clusters.append(
+            {
+                "topic": theme,
+                "nps_score": round(avg_nps * 100, 1),
+                "sentiment": round(avg_engagement, 2),  # Now represents engagement quality
+                "volume": len(matched),
+                "words": words,
+            }
+        )
+
+    clusters.sort(key=lambda c: (-c["volume"], c["nps_score"]))
+    return clusters
+
+
+def compute_session_points(sessions: List[ConversationState]) -> List[Dict[str, Any]]:
+    """Create per-session points for the perception map.
+
+    Uses NPS for X-axis and inverted EFI (engagement quality) for Y-axis.
+    Low EFI = high engagement quality = higher Y position.
+    """
+    points: List[Dict[str, Any]] = []
+    for session in sessions:
+        user_texts = [m.text for m in session.messages if m.role == "user"]
+        suggestion = session.extracted_fields.get("improvement_suggestion")
+        if suggestion and suggestion.value:
+            user_texts.append(str(suggestion.value))
+
+        combined = " ".join(user_texts).lower()
+        # Match ALL themes for this session, not just the first one
+        matched_themes = []
+        for theme, patterns in THEME_PATTERNS.items():
+            if any(re.search(pat, combined) for pat in patterns):
+                matched_themes.append(theme)
+
+        if not matched_themes:
+            continue
+
+        nps_info = (session.last_metrics or {}).get("nps") or {}
+        p_adv = nps_info.get("p_advocacy")
+        if not isinstance(p_adv, (int, float)):
+            p_adv = 0.5  # Default to middle if no NPS
+
+        # Use EFI as an independent Y-axis metric
+        # Invert it: low friction (low EFI) = high quality = high Y position
+        efi = session.current_efi if session.efi_history else 0.5
+        engagement_quality = 1.0 - efi  # Invert: 0 friction -> 1.0, 1 friction -> 0.0
+
+        # Create a point for each matched theme
+        for theme in matched_themes:
+            points.append(
+                {
+                    "session_id": session.session_id,
+                    "topic": theme,
+                    "nps_score": round(float(p_adv) * 100, 1),
+                    "sentiment": round(engagement_quality, 2),  # Now uses EFI-based quality
+                }
+            )
+
+    return points
+
+
+def compute_conversation_health(sessions: List[ConversationState]) -> Dict[str, Any]:
+    """Compute aggregate health signals for conversations."""
+    if not sessions:
+        return {
+            "avg_turns_before_dropoff": 0.0,
+            "left_on_read_count": 0,
+            "left_on_read_rate": 0.0,
+            "avg_turns_completed": 0.0,
+            "avg_turns_in_progress": 0.0,
+        }
+
+    dropoff = [
+        s for s in sessions
+        if s.status in [ConversationStatus.EXITED, ConversationStatus.ABANDONED]
+    ]
+    in_progress = [s for s in sessions if s.status == ConversationStatus.IN_PROGRESS]
+    completed = [s for s in sessions if s.status == ConversationStatus.COMPLETED]
+
+    avg_dropoff = sum(s.turn_count for s in dropoff) / len(dropoff) if dropoff else 0.0
+    avg_completed = sum(s.turn_count for s in completed) / len(completed) if completed else 0.0
+    avg_in_progress = sum(s.turn_count for s in in_progress) / len(in_progress) if in_progress else 0.0
+
+    left_on_read = [
+        s for s in in_progress
+        if s.messages and s.messages[-1].role == "bot"
+    ]
+    left_on_read_count = len(left_on_read)
+    left_on_read_rate = left_on_read_count / len(in_progress) if in_progress else 0.0
+
+    return {
+        "avg_turns_before_dropoff": round(avg_dropoff, 1),
+        "left_on_read_count": left_on_read_count,
+        "left_on_read_rate": round(left_on_read_rate, 2),
+        "avg_turns_completed": round(avg_completed, 1),
+        "avg_turns_in_progress": round(avg_in_progress, 1),
+    }
 
 # =============================================================================
 # AGGREGATION FUNCTIONS
@@ -258,6 +423,9 @@ def get_dashboard_data() -> Dict:
     """Get all data needed for the admin dashboard."""
     metrics = compute_aggregate_metrics()
     sessions = get_all_sessions()
+    topic_clusters = compute_topic_clusters(sessions)
+    session_points = compute_session_points(sessions)
+    conversation_health = compute_conversation_health(sessions)
 
     # Session summaries
     session_summaries = [get_session_summary(s) for s in sessions]
@@ -295,6 +463,9 @@ def get_dashboard_data() -> Dict:
         "session_summaries": session_summaries,
         "live_sessions": live_sessions,
         "recent_extractions": recent_extractions[:20],  # Limit to 20
+        "topic_clusters": topic_clusters,
+        "session_points": session_points,
+        "conversation_health": conversation_health,
     }
 
 

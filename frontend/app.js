@@ -26,6 +26,7 @@ const state = {
 
 const elements = {
     startBtn: document.getElementById('start-btn'),
+    endBtn: document.getElementById('end-btn'),
     messagesArea: document.getElementById('messages-area'),
     messageInput: document.getElementById('message-input'),
     sendBtn: document.getElementById('send-btn'),
@@ -77,6 +78,18 @@ async function sendMessage(sessionId, text, latencyMs) {
             session_id: sessionId,
             text: text,
             latency_ms: latencyMs,
+        }),
+    });
+    return response.json();
+}
+
+async function endChat(sessionId) {
+    const response = await fetch(`${API_BASE}/chat/end`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            session_id: sessionId,
+            status: 'completed',
         }),
     });
     return response.json();
@@ -207,6 +220,7 @@ function updateStatus(status) {
     elements.messageInput.disabled = !isActive;
     elements.sendBtn.disabled = !isActive;
     elements.startBtn.disabled = isActive;
+    elements.endBtn.disabled = !isActive;
 }
 
 function renderProgress(sessionState) {
@@ -307,6 +321,7 @@ async function handleStart() {
 
         // Enable input
         enableInput();
+        elements.endBtn.disabled = false;
 
         try {
             const sessionState = await fetchSessionState(state.sessionId);
@@ -323,6 +338,23 @@ async function handleStart() {
         alert('Failed to start conversation. Check console for details.');
         elements.startBtn.disabled = false;
         elements.startBtn.textContent = 'Start Conversation';
+    }
+}
+
+async function handleEnd() {
+    if (!state.sessionId) return;
+
+    elements.endBtn.disabled = true;
+    try {
+        const result = await endChat(state.sessionId);
+        if (result.closing_message) {
+            addMessage(result.closing_message, 'bot');
+        }
+        updateStatus(result.status || 'completed');
+        disableInput();
+    } catch (error) {
+        console.error('Failed to end chat:', error);
+        elements.endBtn.disabled = false;
     }
 }
 
@@ -388,6 +420,7 @@ async function handleSend() {
 async function init() {
     // Event listeners
     elements.startBtn.addEventListener('click', handleStart);
+    elements.endBtn.addEventListener('click', handleEnd);
     elements.sendBtn.addEventListener('click', handleSend);
 
     elements.messageInput.addEventListener('keypress', (e) => {

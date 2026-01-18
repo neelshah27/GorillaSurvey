@@ -308,6 +308,332 @@
         .gauge-fill.ids {
             background: linear-gradient(90deg, var(--ids-low), var(--ids-high));
         }
+
+        .perception-map {
+            position: relative;
+            height: 480px;
+            border-radius: var(--radius-lg);
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.02), rgba(15, 23, 42, 0.06));
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .map-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(90deg, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(15, 23, 42, 0.08) 1px, transparent 1px);
+            background-size: 20% 25%;
+            opacity: 0.3;
+        }
+
+        .map-axis-label {
+            position: absolute;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-tertiary);
+        }
+
+        .map-axis-label.x {
+            bottom: 12px;
+            right: 16px;
+        }
+
+        .map-axis-label.y {
+            top: 16px;
+            left: 16px;
+        }
+
+        .cluster-group {
+            position: absolute;
+            padding: var(--spacing-sm) var(--spacing-md);
+            transform: translate(-50%, -50%);
+            min-width: 140px;
+            max-width: 220px;
+        }
+
+        .cluster-outline {
+            position: absolute;
+            inset: -12px;
+            border: 1px dashed rgba(31, 122, 140, 0.35);
+            border-radius: 18px;
+            pointer-events: none;
+        }
+
+        .cluster-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--accent-secondary);
+            letter-spacing: 0.08em;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .cluster-words {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .word-pill {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--border-color);
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .cluster-score {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: var(--spacing-xs);
+        }
+
+        .cluster-group.compact {
+            min-width: 120px;
+            max-width: 170px;
+        }
+
+        .cluster-group.compact .cluster-title {
+            font-size: 0.7rem;
+        }
+
+        .cluster-group.compact .cluster-score {
+            font-size: 0.65rem;
+        }
+
+        .perception-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .topic-hull {
+            fill-opacity: 0.12;
+            stroke-width: 0.35;
+            stroke-dasharray: 1.5 1.5;
+            stroke-opacity: 0.5;
+        }
+
+        .topic-dot {
+            opacity: 0.75;
+            cursor: pointer;
+            transition: opacity 0.15s ease, r 0.15s ease;
+        }
+
+        .topic-dot:hover {
+            opacity: 1;
+        }
+
+        .topic-label {
+            font-size: 2.2px;
+            font-weight: 600;
+            letter-spacing: 0.08px;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        .topic-label-bg {
+            fill: rgba(255, 255, 255, 0.94);
+            stroke: rgba(15, 23, 42, 0.06);
+            stroke-width: 0.12;
+            rx: 0.6;
+            ry: 0.6;
+            pointer-events: none;
+        }
+
+        .perception-map-container {
+            position: relative;
+            display: flex;
+            gap: var(--spacing-md);
+        }
+
+        .perception-map-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .map-info-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: all 0.15s ease;
+        }
+
+        .map-info-btn:hover {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .map-info-btn.active {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .map-insights-panel {
+            width: 280px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            border: 1px solid var(--border-color);
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            display: none;
+            max-height: 440px;
+            overflow-y: auto;
+        }
+
+        .map-insights-panel.visible {
+            display: block;
+        }
+
+        .map-insights-panel h4 {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .insight-item {
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .insight-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .insight-topic {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .dot-tooltip {
+            position: absolute;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 0.75rem;
+            box-shadow: var(--shadow-md);
+            pointer-events: none;
+            z-index: 100;
+            max-width: 180px;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .dot-tooltip.visible {
+            opacity: 1;
+        }
+
+        .dot-tooltip-topic {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            text-transform: capitalize;
+        }
+
+        .dot-tooltip-words {
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+        }
+
+        .signal-list {
+            display: flex;
+            gap: var(--spacing-sm);
+            overflow-x: auto;
+            padding-bottom: var(--spacing-sm);
+            scrollbar-width: thin;
+        }
+
+        .signal-list::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .signal-list::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+
+        .signal-list::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .signal-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            min-width: 160px;
+            flex-shrink: 0;
+        }
+
+        .signal-title {
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 2px;
+            white-space: nowrap;
+        }
+
+        .signal-meta {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .health-grid {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .health-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border-color);
+            min-width: 100px;
+        }
+
+        .health-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .health-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
     </style>
 </head>
 <body>
@@ -390,6 +716,49 @@
             <div class="stat-header">Top Feedback Themes</div>
             <div class="themes-list" id="themes-list">
                 <div class="empty-state">No themes extracted yet</div>
+            </div>
+        </div>
+
+        <!-- Perception Map -->
+        <div class="stat-card full">
+            <div class="stat-header">Topic Perception Map</div>
+            <div class="stat-subtitle">Clusters show what people talk about vs. how it affects loyalty</div>
+            <div class="perception-map-container">
+                <div class="perception-map-wrapper">
+                    <div class="perception-map" id="perception-map">
+                        <div class="map-grid"></div>
+                        <div class="map-axis-label y">Engagement Quality (Low to High)</div>
+                        <div class="map-axis-label x">NPS Signal (Detractor to Promoter)</div>
+                        <svg class="perception-svg" id="perception-svg" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid meet"></svg>
+                        <button class="map-info-btn" id="map-info-btn" title="View insights">i</button>
+                        <div class="dot-tooltip" id="dot-tooltip">
+                            <div class="dot-tooltip-topic"></div>
+                            <div class="dot-tooltip-words"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="map-insights-panel" id="map-insights-panel">
+                    <h4>Trend Insights</h4>
+                    <div id="insights-content">
+                        <div class="empty-state">No insights yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actionable Signals -->
+        <div class="stat-card wide">
+            <div class="stat-header">Actionable Signals</div>
+            <div class="signal-list" id="signal-list">
+                <div class="empty-state">No signals yet</div>
+            </div>
+        </div>
+
+        <!-- Conversation Health -->
+        <div class="stat-card wide">
+            <div class="stat-header">Conversation Health</div>
+            <div class="health-grid" id="health-grid">
+                <div class="empty-state">No health signals yet</div>
             </div>
         </div>
 
@@ -557,6 +926,10 @@
             } else {
                 extractionsGrid.innerHTML = '<div class="empty-state">No extractions yet</div>';
             }
+
+            renderTopicMap(data.topic_clusters || [], data.session_points || []);
+            renderSignals(data.topic_clusters || []);
+            renderConversationHealth(data.conversation_health || {});
         }
 
         function formatFieldName(fieldId) {
@@ -564,6 +937,402 @@
                 .split('_')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');
+        }
+
+        function renderTopicMap(clusters, points) {
+            const map = document.getElementById('perception-map');
+            const svg = document.getElementById('perception-svg');
+            const existingEmpty = map.querySelector('.empty-state');
+
+            if (!clusters.length) {
+                if (!existingEmpty) {
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-state';
+                    empty.textContent = 'No topics yet';
+                    map.appendChild(empty);
+                }
+                svg.innerHTML = '';
+                return;
+            }
+
+            if (existingEmpty) {
+                existingEmpty.remove();
+            }
+
+            const palette = [
+                '#1f7a8c', '#f59e0b', '#22c55e', '#8b5cf6', '#ef4444',
+                '#0ea5e9', '#f97316', '#14b8a6', '#d946ef', '#64748b',
+            ];
+            const topicColors = {};
+            clusters.forEach((cluster, idx) => {
+                topicColors[cluster.topic] = palette[idx % palette.length];
+            });
+
+            // Pre-defined cluster positions spread across the map (like t-SNE layout)
+            // Y values scaled for viewBox 0-60
+            const clusterBasePositions = {
+                sizing:   { x: 75, y: 15 },
+                colors:   { x: 55, y: 33 },
+                price:    { x: 25, y: 24 },
+                quality:  { x: 60, y: 45 },
+                shipping: { x: 85, y: 27 },
+                fabric:   { x: 40, y: 18 },
+                photos:   { x: 80, y: 12 },
+                returns:  { x: 30, y: 42 },
+                variety:  { x: 50, y: 51 },
+            };
+
+            const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+
+            // Seeded random for consistent jitter
+            const jitterSeed = (str) => {
+                let hash = 0;
+                for (let i = 0; i < str.length; i += 1) {
+                    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                    hash |= 0;
+                }
+                return Math.abs(hash);
+            };
+
+            // Generate pseudo-random value from seed
+            const seededRandom = (seed) => {
+                const x = Math.sin(seed) * 10000;
+                return x - Math.floor(x);
+            };
+
+            // Convert a point to map coordinates (viewBox is 100x60)
+            const toPoint = (p) => {
+                const seed = jitterSeed(`${p.session_id}-${p.topic}`);
+                const base = clusterBasePositions[p.topic] || { x: 50, y: 30 };
+
+                // Data-driven offset
+                const npsOffset = ((p.nps_score / 100) - 0.5) * 10;
+                const sentimentOffset = ((p.sentiment || 0.5) - 0.5) * 6;
+
+                // Random jitter for natural spread
+                const jitterX = (seededRandom(seed) - 0.5) * 12;
+                const jitterY = (seededRandom(seed + 1) - 0.5) * 8;
+
+                const x = clamp(base.x + npsOffset + jitterX, 5, 95);
+                const y = clamp(base.y - sentimentOffset + jitterY, 4, 56);
+
+                return { x, y };
+            };
+
+            const byTopic = {};
+            points.forEach((p) => {
+                if (!byTopic[p.topic]) {
+                    byTopic[p.topic] = [];
+                }
+                byTopic[p.topic].push(toPoint(p));
+            });
+
+            // Convex hull algorithm
+            const hullPoints = (pts) => {
+                if (pts.length < 3) return pts;
+                const sorted = [...pts].sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x));
+                const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+                const lower = [];
+                sorted.forEach((p) => {
+                    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+                        lower.pop();
+                    }
+                    lower.push(p);
+                });
+                const upper = [];
+                [...sorted].reverse().forEach((p) => {
+                    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+                        upper.pop();
+                    }
+                    upper.push(p);
+                });
+                upper.pop();
+                lower.pop();
+                return lower.concat(upper);
+            };
+
+            // Inflate hull outward from centroid
+            const inflate = (pts, factor = 1.25) => {
+                if (!pts.length) return pts;
+                const cx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+                const cy = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+                return pts.map((p) => ({
+                    x: clamp(cx + (p.x - cx) * factor, 3, 97),
+                    y: clamp(cy + (p.y - cy) * factor, 3, 57),
+                }));
+            };
+
+            // Generate smooth curved path (rounded hull)
+            const smoothPath = (pts) => {
+                if (pts.length === 0) return '';
+                if (pts.length === 1) {
+                    const r = 4;
+                    return `M ${pts[0].x - r} ${pts[0].y} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 -${r * 2} 0`;
+                }
+                if (pts.length === 2) {
+                    const cx = (pts[0].x + pts[1].x) / 2;
+                    const cy = (pts[0].y + pts[1].y) / 2;
+                    const r = Math.max(4, Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) / 2 + 2);
+                    return `M ${cx - r} ${cy} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 -${r * 2} 0`;
+                }
+
+                // Create smooth bezier curve through hull points
+                let path = `M ${pts[0].x} ${pts[0].y}`;
+                for (let i = 0; i < pts.length; i++) {
+                    const p0 = pts[(i - 1 + pts.length) % pts.length];
+                    const p1 = pts[i];
+                    const p2 = pts[(i + 1) % pts.length];
+                    const p3 = pts[(i + 2) % pts.length];
+
+                    // Catmull-Rom to Bezier conversion
+                    const tension = 0.5;
+                    const cp1x = p1.x + (p2.x - p0.x) * tension / 3;
+                    const cp1y = p1.y + (p2.y - p0.y) * tension / 3;
+                    const cp2x = p2.x - (p3.x - p1.x) * tension / 3;
+                    const cp2y = p2.y - (p3.y - p1.y) * tension / 3;
+
+                    path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+                }
+                path += ' Z';
+                return path;
+            };
+
+            const hulls = Object.keys(byTopic).map((topic) => {
+                const pts = byTopic[topic];
+                const hull = inflate(hullPoints(pts), pts.length < 4 ? 1.4 : 1.25);
+                return {
+                    topic,
+                    color: topicColors[topic] || '#1f7a8c',
+                    path: smoothPath(hull),
+                };
+            });
+
+            // Store cluster data for tooltips - assign individual words to dots
+            const clusterWords = {};
+            clusters.forEach((c) => {
+                clusterWords[c.topic] = c.words || [];
+            });
+
+            // Track word index per topic for round-robin assignment
+            const wordIndex = {};
+
+            const dots = points.map((p, idx) => {
+                const { x, y } = toPoint(p);
+                const color = topicColors[p.topic] || '#1f7a8c';
+                const words = clusterWords[p.topic] || [];
+
+                // Assign one specific word to this dot (round-robin through available words)
+                if (!wordIndex[p.topic]) wordIndex[p.topic] = 0;
+                const word = words.length > 0 ? words[wordIndex[p.topic] % words.length] : p.topic;
+                wordIndex[p.topic]++;
+
+                return `<circle class="topic-dot" cx="${x}" cy="${y}" r="1.2" fill="${color}" data-topic="${p.topic}" data-word="${word}" data-idx="${idx}" />`;
+            });
+
+            const topicCentroids = {};
+            Object.keys(byTopic).forEach((topic) => {
+                const pts = byTopic[topic];
+                if (pts.length > 0) {
+                    const cx = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+                    const cy = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+                    topicCentroids[topic] = { x: cx, y: cy };
+                }
+            });
+
+            // Label offsets to position labels outside clusters (avoid overlap)
+            const labelOffsets = {
+                sizing:   { dx: 10, dy: -6 },
+                colors:   { dx: 8, dy: -5 },
+                price:    { dx: -8, dy: -5 },
+                quality:  { dx: 8, dy: -5 },
+                shipping: { dx: 8, dy: -5 },
+                fabric:   { dx: 10, dy: -4 },
+                photos:   { dx: 0, dy: -6 },
+                returns:  { dx: -8, dy: -5 },
+                variety:  { dx: 0, dy: -6 },
+            };
+
+            const labels = clusters.map((cluster) => {
+                const centroid = topicCentroids[cluster.topic];
+                const base = clusterBasePositions[cluster.topic] || { x: 50, y: 30 };
+                const offset = labelOffsets[cluster.topic] || { dx: 0, dy: -5 };
+                const cx = centroid ? centroid.x : base.x;
+                const cy = centroid ? centroid.y : base.y;
+                const x = clamp(cx + offset.dx, 10, 90);
+                const y = clamp(cy + offset.dy, 4, 54);
+                const text = cluster.topic.toUpperCase();
+                const labelWidth = Math.max(7, text.length * 1.1);
+                return `
+                    <g>
+                        <rect class="topic-label-bg" x="${x - labelWidth / 2}" y="${y - 1.6}" width="${labelWidth}" height="3"></rect>
+                        <text class="topic-label" x="${x}" y="${y + 0.4}" text-anchor="middle" fill="${topicColors[cluster.topic] || '#1f7a8c'}">${text}</text>
+                    </g>
+                `;
+            });
+
+            svg.innerHTML = `
+                ${hulls.map((h) => `
+                    <path class="topic-hull" d="${h.path}" fill="${h.color}" stroke="${h.color}"></path>
+                `).join('')}
+                ${dots.join('')}
+                ${labels.join('')}
+            `;
+
+            // Add dot hover/click handlers
+            setupDotInteractions();
+
+            // Update insights panel
+            renderMapInsights(clusters);
+        }
+
+        function setupDotInteractions() {
+            const svg = document.getElementById('perception-svg');
+            const tooltip = document.getElementById('dot-tooltip');
+            const map = document.getElementById('perception-map');
+
+            svg.querySelectorAll('.topic-dot').forEach((dot) => {
+                dot.addEventListener('mouseenter', (e) => {
+                    const topic = dot.getAttribute('data-topic');
+                    const word = dot.getAttribute('data-word');
+                    const svgRect = svg.getBoundingClientRect();
+
+                    // Get position from circle attributes (viewBox is 100x60)
+                    const cx = parseFloat(dot.getAttribute('cx'));
+                    const cy = parseFloat(dot.getAttribute('cy'));
+
+                    // Convert SVG coordinates to pixel position
+                    const x = (cx / 100) * svgRect.width;
+                    const y = (cy / 60) * svgRect.height;
+
+                    tooltip.querySelector('.dot-tooltip-topic').textContent = topic;
+                    tooltip.querySelector('.dot-tooltip-words').textContent = word || topic;
+
+                    tooltip.style.left = `${x + 12}px`;
+                    tooltip.style.top = `${y - 8}px`;
+                    tooltip.classList.add('visible');
+
+                    // Enlarge dot on hover
+                    dot.setAttribute('r', '1.8');
+                });
+
+                dot.addEventListener('mouseleave', () => {
+                    tooltip.classList.remove('visible');
+                    dot.setAttribute('r', '1.2');
+                });
+            });
+        }
+
+        function renderMapInsights(clusters) {
+            const content = document.getElementById('insights-content');
+            if (!clusters.length) {
+                content.innerHTML = '<div class="empty-state">No insights yet</div>';
+                return;
+            }
+
+            // Sort by volume for insights
+            const sorted = [...clusters].sort((a, b) => b.volume - a.volume);
+
+            const insights = sorted.map((cluster) => {
+                const nps = cluster.nps_score;
+                const engagement = cluster.sentiment; // This is now engagement quality
+                const vol = cluster.volume;
+
+                // Generate natural language insight
+                let insight = '';
+                const topicCap = cluster.topic.charAt(0).toUpperCase() + cluster.topic.slice(1);
+
+                if (nps >= 70 && engagement >= 0.6) {
+                    insight = `${topicCap} is a strength. Users who mention it are promoters with high engagement.`;
+                } else if (nps >= 70 && engagement < 0.4) {
+                    insight = `${topicCap} correlates with promoters, but conversations show friction. Streamline discussions about this topic.`;
+                } else if (nps <= 40 && engagement >= 0.6) {
+                    insight = `${topicCap} discussions flow smoothly but users end up detractors. The underlying issue needs addressing.`;
+                } else if (nps <= 40 && engagement < 0.4) {
+                    insight = `${topicCap} is a pain point. High friction and low NPS suggest this needs immediate attention.`;
+                } else if (vol >= 5) {
+                    insight = `${topicCap} is frequently mentioned (${vol} sessions). Monitor for emerging patterns.`;
+                } else {
+                    insight = `${topicCap} has moderate signals. ${vol} session${vol !== 1 ? 's' : ''} mention${vol === 1 ? 's' : ''} this topic.`;
+                }
+
+                return `
+                    <div class="insight-item">
+                        <div class="insight-topic">${topicCap}</div>
+                        <div>${insight}</div>
+                    </div>
+                `;
+            });
+
+            content.innerHTML = insights.join('');
+        }
+
+        // Info button toggle
+        document.getElementById('map-info-btn').addEventListener('click', () => {
+            const btn = document.getElementById('map-info-btn');
+            const panel = document.getElementById('map-insights-panel');
+            btn.classList.toggle('active');
+            panel.classList.toggle('visible');
+        });
+
+        function renderSignals(clusters) {
+            const list = document.getElementById('signal-list');
+            if (!clusters.length) {
+                list.innerHTML = '<div class="empty-state">No signals yet</div>';
+                return;
+            }
+
+            const signals = clusters.map((cluster) => {
+                let label = 'Monitor';
+                let note = 'Low volume or mixed signals';
+                const engagement = cluster.sentiment; // Now represents engagement quality
+
+                if (cluster.volume >= 3 && cluster.nps_score <= 40) {
+                    label = 'Fix Now';
+                    note = 'High volume + low NPS';
+                } else if (cluster.volume >= 3 && cluster.nps_score >= 70) {
+                    label = 'Protect';
+                    note = 'High volume + promoter NPS';
+                } else if (cluster.volume >= 3 && engagement < 0.4) {
+                    label = 'Improve';
+                    note = 'High friction in conversations';
+                }
+
+                return `
+                    <div class="signal-card">
+                        <div class="signal-title">${cluster.topic} - ${label}</div>
+                        <div class="signal-meta">${note}. NPS ${cluster.nps_score}, ${cluster.volume} sessions.</div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = signals.join('');
+        }
+
+        function renderConversationHealth(health) {
+            const grid = document.getElementById('health-grid');
+            if (!health || Object.keys(health).length === 0) {
+                grid.innerHTML = '<div class="empty-state">No health signals yet</div>';
+                return;
+            }
+
+            grid.innerHTML = `
+                <div class="health-card">
+                    <div class="health-value">${health.avg_turns_before_dropoff}</div>
+                    <div class="health-label">Avg Turns Before Dropoff</div>
+                </div>
+                <div class="health-card">
+                    <div class="health-value">${health.left_on_read_count}</div>
+                    <div class="health-label">Left on Read</div>
+                </div>
+                <div class="health-card">
+                    <div class="health-value">${Math.round(health.left_on_read_rate * 100)}%</div>
+                    <div class="health-label">Left on Read Rate</div>
+                </div>
+                <div class="health-card">
+                    <div class="health-value">${health.avg_turns_completed}</div>
+                    <div class="health-label">Avg Turns (Completed)</div>
+                </div>
+            `;
         }
 
         // Initial load

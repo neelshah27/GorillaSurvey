@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import openai
 from typing import Dict, Any, List, Optional
+from datetime import datetime
 
 from src.agent_config import get_writer_config
 
@@ -77,6 +78,16 @@ class SimulateUserRequest(BaseModel):
 class SimulateUserResponse(BaseModel):
     user_message: str
     persona_id: str
+
+
+class EndChatRequest(BaseModel):
+    session_id: str
+    status: Optional[str] = "completed"
+
+
+class EndChatResponse(BaseModel):
+    status: str
+    closing_message: str
 
 
 # =============================================================================
@@ -447,6 +458,30 @@ async def send_message(request: SendMessageRequest):
     )
 
 
+@router.post("/end", response_model=EndChatResponse)
+async def end_chat(request: EndChatRequest):
+    """End a conversation early (manual stop)."""
+    state = get_session(request.session_id)
+    if not state:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if state.status in [ConversationStatus.COMPLETED, ConversationStatus.EXITED]:
+        return EndChatResponse(status=state.status.value, closing_message="")
+
+    status_map = {
+        "completed": ConversationStatus.COMPLETED,
+        "exited": ConversationStatus.EXITED,
+    }
+    state.status = status_map.get(request.status, ConversationStatus.COMPLETED)
+    state.last_activity = datetime.utcnow()
+
+    context = get_writer_context(state)
+    closing = generate_exit_message(context)
+    add_bot_message(state, closing)
+
+    return EndChatResponse(status=state.status.value, closing_message=closing)
+
+
 @router.get("/state/{session_id}")
 async def get_chat_state(session_id: str):
     """Get the full state of a conversation."""
@@ -520,6 +555,5 @@ async def list_personas():
         "count": len(personas),
         "personas": [p.to_dict() for p in personas]
     }
-
 
 
