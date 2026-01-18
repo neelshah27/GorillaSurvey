@@ -419,6 +419,7 @@ def get_writer_context(state: ConversationState) -> Dict:
 
         "opening_message": survey.opening_message,
         "closing_message": survey.closing_message,
+        "user_context": state.user_context,
     }
 
 

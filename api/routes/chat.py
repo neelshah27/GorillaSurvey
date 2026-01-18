@@ -122,20 +122,42 @@ def generate_bot_message(context: Dict[str, Any]) -> str:
     if strategy == "opening" or turn_count <= 1:
         client = get_openai_client()
 
-        prompt = f"""
-        say exactly what i am saying below
+        context_note = user_context.strip() if isinstance(user_context, str) and user_context.strip() else None
+        if not context_note:
+            context_note = "No extra context provided. Use a generic reason like a recent purchase or interaction."
 
-        {user_context}
-        """
+        system_prompt = f"""
+You are a friendly, human-sounding member of the {brand_name} marketing team.
+Write ONE opening message that sounds natural and varies phrasing each time.
+
+Must include:
+- Your made up name with a geanric first name.
+- "{brand_name} marketing team" (or close variant that clearly conveys the team).
+- A brief, context-based reason for reaching out (use the context provided below).
+- A polite ask for permission to ask a few questions.
+
+Style:
+- 1-2 sentences, casual, warm, under ~35 words.
+- 0-1 emoji.
+- Do NOT mention "survey", "questionnaire", "rate", or "scale".
+- Do NOT copy a fixed template verbatim.
+""".strip()
+
+        user_prompt = f"""
+Context to use for the reason we are reaching out:
+{context_note}
+
+Return only the message text.
+""".strip()
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "..."},
-                {"role": "user", "content": prompt},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
-            temperature=0.7,
-            max_tokens=100,
+            temperature=0.9,
+            max_tokens=80,
         )
 
         return response.choices[0].message.content.strip()
@@ -325,9 +347,9 @@ async def start_chat(request: StartChatRequest):
         persona_id=request.persona_id,
     )
 
-    # Get opening message
-    survey = get_survey()
-    opening = survey.opening_message
+    # Get opening message (dynamic, human-like)
+    context = get_writer_context(state)
+    opening = generate_bot_message(context)
 
     # Add bot message to state
     add_bot_message(state, opening)
