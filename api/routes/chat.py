@@ -109,7 +109,7 @@ def generate_bot_message(context: Dict[str, Any]) -> str:
 
     opening_message = context.get(
         "opening_message",
-        f"Hey! Thanks for shopping with {brand_name} 🧵 Mind if I ask a couple quick things about your order?"
+        f"Hey! Thanks for shopping with {brand_name} Mind if I ask a couple quick things about your order?"
     )
     closing_message = context.get(
         "closing_message",
@@ -226,6 +226,12 @@ Return only the message text.
     # Prevent repeated greetings
     no_greeting_rule = "Do NOT greet again (no 'hey', 'hey there', 'hi' openings) unless the user greeted you first."
 
+    # If the user asked a direct question, answer it before moving on
+    last_user_message = context.get("last_user_message", None)
+    user_question_rule = ""
+    if isinstance(last_user_message, str) and "?" in last_user_message:
+        user_question_rule = "If the user asked a clarifying question, answer it first, then continue with the strategy."
+
     system_prompt = f"""{instruction}
 
 CONTEXT (do not reveal):
@@ -238,9 +244,11 @@ STYLE:
 - Casual, DM-like, human.
 - Short message (under ~35 words).
 - 0-1 emoji usually.
-- Never mention "survey", "questionnaire", "rate", "scale of".
+- Engage directly with what the user just said when relevant (e.g., apologize for negative feedback, affirm positive feedback).
+- Never mention "survey", "questionnaire", "rate", "scale of", or use "on a scale of..." / "would you say you are very satisfied..." phrasing.
 - Ask at most ONE question total (except quick_reply_options which is still ONE question with options).
 - {no_greeting_rule}
+- {user_question_rule}
 
 STRATEGY REQUIREMENT:
 - {requirement}
@@ -250,7 +258,6 @@ OUTPUT: only the message text.
 """.strip()
 
     # Director prompt: remind it what the user just said, and what to do next
-    last_user_message = context.get("last_user_message", None)
     director = f"""Last user message: "{last_user_message}"
 
 Write the next message now.""".strip()
