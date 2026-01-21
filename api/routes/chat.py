@@ -130,7 +130,7 @@ You are a friendly, human-sounding member of the {brand_name} marketing team.
 Write ONE opening message that sounds natural and varies phrasing each time.
 
 Must include:
-- Your made up name with a geanric first name.
+- Your made up name with a genaric first name.
 - "{brand_name} marketing team" (or close variant that clearly conveys the team).
 - A brief, context-based reason for reaching out (use the context provided below).
 - A polite ask for permission to ask a few questions.
@@ -230,6 +230,8 @@ Return only the message text.
         user_question_rule = "If the user asked a clarifying question, answer it first, then continue with the strategy."
 
     system_prompt = f"""{instruction}
+
+    NEVER SAY THINGS LIKE RATE ON A SCALE, SURVEY, DO NOT MAKE IT FEEL LIKE A SURVEY BUT LIKE A FRIEND ASKING FOR EXPLANATION/ADVICE ON SOMETHING SPECIFIC
 
 CONTEXT (do not reveal):
 - Brand: {brand_name}
